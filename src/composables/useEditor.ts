@@ -1,8 +1,8 @@
 import { ref, reactive, computed } from 'vue';
 import type { FileTab, EditorSettings, ProgramOutput } from '../types';
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
-import { readTextFile } from '@tauri-apps/plugin-fs'
-import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
+import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 
 
 export function useEditor() {
@@ -57,12 +57,12 @@ export function useEditor() {
       isModified: !path,
       isActive: false,
       created: new Date(),
-      confirmClosePending: false
+      confirmClosePending: false,
     };
 
     tabs.value.push(newTab);
     setActiveTab(tabId);
-    
+
     return newTab;
   };
 
@@ -74,13 +74,13 @@ export function useEditor() {
     activeTabId.value = tabId;
   };
 
-  // Закрытие таба
+  // Закрытие таба (двойное подтверждение для несохранённых)
   const closeTab = (tabId: string) => {
     const tabIndex = tabs.value.findIndex(tab => tab.id === tabId);
     if (tabIndex === -1) return;
 
     const tab = tabs.value[tabIndex];
-    
+
     // Проверка несохранённых изменений
     if (tab.isModified) {
       if (!tab.confirmClosePending) {
@@ -99,7 +99,7 @@ export function useEditor() {
         addOutput({
           type: 'warning',
           message: `Предупреждение: есть несохранённые изменения в файле "${tab.name}". Нажмите ещё раз, чтобы закрыть.`,
-          timestamp: new Date()
+          timestamp: new Date(),
         });
         return;
       }
@@ -118,7 +118,6 @@ export function useEditor() {
     // Если закрыли активный таб, переключаемся на другой
     if (tabId === activeTabId.value) {
       if (tabs.value.length > 0) {
-        // Переключаемся на соседний таб
         const newActiveIndex = Math.min(tabIndex, tabs.value.length - 1);
         setActiveTab(tabs.value[newActiveIndex].id);
       } else {
@@ -132,7 +131,7 @@ export function useEditor() {
     if (hasUnsavedChanges.value) {
       console.log('Предупреждение: есть несохранённые изменения');
     }
-    
+
     tabs.value = [];
     activeTabId.value = null;
   };
@@ -142,10 +141,8 @@ export function useEditor() {
     const keepTab = tabs.value.find(tab => tab.id === keepTabId);
     if (!keepTab) return;
 
-    const hasUnsavedInOthers = tabs.value.some(tab => 
-      tab.id !== keepTabId && tab.isModified
-    );
-    
+    const hasUnsavedInOthers = tabs.value.some(tab => tab.id !== keepTabId && tab.isModified);
+
     if (hasUnsavedInOthers) {
       console.log('Предупреждение: есть несохранённые изменения в других файлах');
     }
@@ -172,30 +169,26 @@ export function useEditor() {
     }
   };
 
-  // Файловые операции
+  // Файловые операции (демо-открытие по пути)
   const openFile = async (filePath?: string) => {
     try {
-      // Здесь будет интеграция с Tauri API
       console.log('Открытие файла:', filePath);
-      
-      // Симуляция открытия файла
+
       const fileName = filePath ? filePath.split('/').pop() || 'example.js' : 'example.js';
       const fileContent = '// Загруженный файл\nconsole.log("Файл успешно загружен");';
-      
-      // Проверяем, не открыт ли уже такой файл
+
       const existingTab = tabs.value.find(tab => tab.path === filePath);
       if (existingTab) {
         setActiveTab(existingTab.id);
         return existingTab;
       }
 
-      // Создаём новый таб для файла
       const newTab = createNewTab(fileName, fileContent, filePath);
-      
+
       addOutput({
         type: 'output',
         message: `Файл "${fileName}" успешно открыт`,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       return newTab;
@@ -204,11 +197,12 @@ export function useEditor() {
       addOutput({
         type: 'error',
         message: 'Не удалось открыть файл',
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     }
   };
 
+  // Реальное сохранение текущей вкладки
   const saveActiveTab = async () => {
     const tab = activeTab.value;
     if (!tab) return;
@@ -218,9 +212,7 @@ export function useEditor() {
     }
 
     try {
-      // Здесь будет интеграция с Tauri API
-      console.log('Сохранение файла:', tab.path);
-      
+      await writeTextFile(tab.path, tab.content);
       tab.isModified = false;
       // Сбрасываем подтверждение после сохранения
       if (tab.confirmClosePending) {
@@ -231,33 +223,40 @@ export function useEditor() {
           confirmTimers.delete(tab.id);
         }
       }
-      
+
       addOutput({
         type: 'output',
         message: `Файл "${tab.name}" успешно сохранён`,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error) {
       console.error('Ошибка сохранения файла:', error);
       addOutput({
         type: 'error',
         message: 'Не удалось сохранить файл',
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     }
   };
 
+  // Сохранить как
   const saveActiveTabAs = async () => {
     const tab = activeTab.value;
     if (!tab) return;
 
     try {
-      // Здесь будет интеграция с Tauri API для диалога сохранения
-      console.log('Сохранение файла как...');
-      
-      const newPath = `/path/to/${tab.name}`;
+      const suggestedName = tab.name || 'Untitled.js';
+      const newPath = await saveDialog({
+        title: 'Сохранить файл как',
+        defaultPath: suggestedName,
+      });
+      if (!newPath) return; // отмена пользователем
+
+      await writeTextFile(newPath, tab.content);
       tab.path = newPath;
+      tab.name = newPath.split('/').pop() || suggestedName;
       tab.isModified = false;
+
       if (tab.confirmClosePending) {
         tab.confirmClosePending = false;
         if (confirmTimers.has(tab.id)) {
@@ -266,45 +265,46 @@ export function useEditor() {
           confirmTimers.delete(tab.id);
         }
       }
-      
+
       addOutput({
         type: 'output',
         message: `Файл сохранён как "${tab.name}"`,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error) {
       console.error('Ошибка сохранения файла:', error);
+      addOutput({
+        type: 'error',
+        message: 'Не удалось сохранить файл',
+        timestamp: new Date(),
+      });
     }
   };
 
-  // Выполнение кода
+  // Выполнение кода (демо)
   const runCode = async () => {
     const tab = activeTab.value;
     if (!tab || isRunning.value) return;
-    
+
     isRunning.value = true;
     clearOutput();
-    
+
     addOutput({
       type: 'output',
       message: `Запуск программы "${tab.name}"...`,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     try {
-      // Симуляция выполнения
       setTimeout(() => {
-        // Простое выполнение JavaScript кода (для демонстрации)
         try {
-          // Создаём функцию console.log для захвата вывода
           let capturedOutput = '';
           const mockConsole = {
             log: (...args: any[]) => {
               capturedOutput += args.join(' ') + '\n';
-            }
+            },
           };
 
-          // Выполняем код с замоченным console
           const code = tab.content.replace(/console\.log/g, 'mockConsole.log');
           const func = new Function('mockConsole', code);
           func(mockConsole);
@@ -313,17 +313,17 @@ export function useEditor() {
             addOutput({
               type: 'output',
               message: capturedOutput.trim(),
-              timestamp: new Date()
+              timestamp: new Date(),
             });
           }
         } catch (execError) {
           addOutput({
             type: 'error',
             message: `Ошибка выполнения: ${execError}`,
-            timestamp: new Date()
+            timestamp: new Date(),
           });
         }
-        
+
         addOutput({
           type: 'output',
           message: 'Программа завершена',
@@ -365,22 +365,25 @@ export function useEditor() {
     settings.tabSize = Math.max(2, Math.min(8, size));
   };
 
+  // Открыть файл с диска (реально)
   async function openFileFromDisk() {
     const selected = await openDialog({
       multiple: false,
       directory: false,
     })
     if (!selected || Array.isArray(selected)) return
-  const path = selected
+
+    const path = selected
     const content = await readTextFile(path)
     // Если вкладка пустая — заполним её, иначе создадим новую
     if (activeTab.value && !activeTab.value.path && !activeTab.value.content) {
       activeTab.value.path = path
       activeTab.value.name = path.split('/').pop() || path // фикс: имя, а не path
       updateActiveTabContent(content)
+      activeTab.value.isModified = false // только что открыли — не изменён
     } else {
       const title = path.split('/').pop() || path
-      // Передаём path сразу, чтобы вкладка считалась сохранённой (не изменённой)
+      // Передаём path, чтобы вкладка считалась сохранённой (не изменённой)
       createNewTab(title, content, path)
     }
   }
@@ -456,7 +459,7 @@ export function useEditor() {
     }
   };
 
-  // Инициализация с одним табом
+  // Инициализация
   const initialize = () => {};
 
   // Инициализируем при создании
@@ -508,6 +511,7 @@ export function useEditor() {
     // Инициализация
     initialize,
 
+    // Действия с реальными файлами
     openFileFromDisk,
     openActiveFileExternally,
     revealActiveFileInFolder,
