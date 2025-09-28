@@ -34,7 +34,8 @@ const {
   runCode,
   
   // Настройки
-  changeFontSize,
+  changeCodeFontSize,
+  changeOutputFontSize,
   
   // Текстовые операции
   insertTaskTemplate,
@@ -106,8 +107,9 @@ const handleRunCode = () => {
   runCode()
 }
 
-const handleFontSizeChange = (change: number) => {
-  changeFontSize(change)
+const handleFontSizeChange = (area: 'code' | 'output', change: number) => {
+  if (area === 'code') changeCodeFontSize(change)
+  else changeOutputFontSize(change)
 }
 
 // Обработчики событий табов
@@ -170,7 +172,7 @@ const activeFileName = computed(() =>
         <CodeEditor 
           v-if="activeTab"
           v-model="editorCode"
-          :font-size="settings.fontSize"
+          :font-size="settings.codeFontSize ?? settings.fontSize"
           class="code-editor-content"
         />
         
@@ -192,7 +194,7 @@ const activeFileName = computed(() =>
       
       <OutputPanel 
         :output="output.map((o: { message: any }) => o.message).join('\n')"
-        :font-size="settings.fontSize"
+        :font-size="settings.outputFontSize ?? settings.fontSize"
         class="output-section"
       />
     </div>

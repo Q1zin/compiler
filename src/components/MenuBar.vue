@@ -5,7 +5,7 @@ const emit = defineEmits<{
   'file-action': [action: string]
   'text-action': [action: string]
   'run-code': []
-  'font-size-change': [change: number]
+  'font-size-change': [area: 'code' | 'output', change: number]
 }>()
 
 const activeMenu = ref<string | null>(null)
@@ -32,8 +32,8 @@ const handleRun = () => {
   emit('run-code')
 }
 
-const handleFontChange = (change: number) => {
-  emit('font-size-change', change)
+const handleFontChange = (area: 'code' | 'output', change: number) => {
+  emit('font-size-change', area, change)
 }
 </script>
 
@@ -105,15 +105,15 @@ const handleFontChange = (change: number) => {
           <div class="dropdown-item font-controls">
             <span>Окно кода</span>
             <div class="font-buttons">
-              <button @click="handleFontChange(-1)" class="font-btn">A-</button>
-              <button @click="handleFontChange(1)" class="font-btn">A+</button>
+              <button @click="handleFontChange('code', -1)" class="font-btn">A-</button>
+              <button @click="handleFontChange('code', 1)" class="font-btn">A+</button>
             </div>
           </div>
           <div class="dropdown-item font-controls">
             <span>Окно вывода</span>
             <div class="font-buttons">
-              <button @click="handleFontChange(-1)" class="font-btn">A-</button>
-              <button @click="handleFontChange(1)" class="font-btn">A+</button>
+              <button @click="handleFontChange('output', -1)" class="font-btn">A-</button>
+              <button @click="handleFontChange('output', 1)" class="font-btn">A+</button>
             </div>
           </div>
           <div class="dropdown-separator"></div>

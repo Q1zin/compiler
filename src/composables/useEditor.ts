@@ -14,10 +14,12 @@ export function useEditor() {
   // Настройки редактора
   const settings = reactive<EditorSettings>({
     fontSize: 14,
+    codeFontSize: 14,
+    outputFontSize: 14,
     theme: 'dark',
     tabSize: 2,
     wordWrap: false,
-    showLineNumbers: true
+    showLineNumbers: true,
   });
 
   // Состояние вывода
@@ -353,8 +355,12 @@ export function useEditor() {
   };
 
   // Управление настройками
-  const changeFontSize = (delta: number) => {
-    settings.fontSize = Math.max(10, Math.min(24, settings.fontSize + delta));
+  const changeCodeFontSize = (delta: number) => {
+    settings.codeFontSize = Math.max(10, Math.min(24, (settings.codeFontSize ?? settings.fontSize) + delta));
+  };
+
+  const changeOutputFontSize = (delta: number) => {
+    settings.outputFontSize = Math.max(10, Math.min(24, (settings.outputFontSize ?? settings.fontSize) + delta));
   };
 
   const toggleWordWrap = () => {
@@ -499,7 +505,8 @@ export function useEditor() {
     clearOutput,
     
     // Настройки
-    changeFontSize,
+  changeCodeFontSize,
+  changeOutputFontSize,
     toggleWordWrap,
     changeTabSize,
     

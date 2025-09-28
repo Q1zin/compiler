@@ -37,7 +37,10 @@ export type MenuAction =
 
 // Типы для настроек редактора
 export interface EditorSettings {
+  // Deprecated: use codeFontSize and outputFontSize
   fontSize: number;
+  codeFontSize?: number;
+  outputFontSize?: number;
   theme: 'dark' | 'light';
   tabSize: number;
   wordWrap: boolean;
@@ -76,7 +79,7 @@ export interface MenuEvents {
   'file-action': (action: MenuAction) => void;
   'text-action': (action: MenuAction) => void;
   'run-code': () => void;
-  'font-size-change': (change: number) => void;
+  'font-size-change': (area: 'code' | 'output', change: number) => void;
 }
 
 export interface EditorEvents {
