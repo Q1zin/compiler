@@ -58,12 +58,7 @@ const handleTab = (event: KeyboardEvent) => {
 <template>
   <div class="code-editor">
     <div class="editor-header">
-      <span class="file-name">main.js</span>
-      <div class="editor-actions">
-        <button class="action-btn">◯</button>
-        <button class="action-btn">□</button>
-        <button class="action-btn">✕</button>
-      </div>
+      <span class="file-name">test.txt</span>
     </div>
     
     <div class="editor-content">

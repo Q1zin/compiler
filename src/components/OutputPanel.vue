@@ -11,7 +11,6 @@ const activeTab = ref('output')
 const tabs = [
   { id: 'output', name: 'Вывод', icon: '📄' },
   { id: 'errors', name: 'Ошибки', icon: '⚠️' },
-  { id: 'terminal', name: 'Терминал', icon: '💻' }
 ]
 
 const outputLines = computed(() => {
@@ -39,15 +38,6 @@ const clearOutput = () => {
           <span>{{ tab.name }}</span>
         </button>
       </div>
-      
-      <div class="panel-actions">
-        <button class="action-btn" @click="clearOutput" title="Очистить">
-          🗑️
-        </button>
-        <button class="action-btn" title="Настройки">
-          ⚙️
-        </button>
-      </div>
     </div>
     
     <div class="panel-content">
@@ -70,28 +60,13 @@ const clearOutput = () => {
           <div class="error-details">
             <div class="error-title">SyntaxError: Unexpected token</div>
             <div class="error-location">at line 5, column 12</div>
-            <div class="error-file">main.js</div>
+            <div class="error-file">test.txt</div>
           </div>
         </div>
         
         <div class="no-errors" :style="{ fontSize: fontSize + 'px' }">
           <span class="success-icon">✅</span>
           <span>Ошибок не найдено</span>
-        </div>
-      </div>
-      
-      <!-- Терминал -->
-      <div v-else-if="activeTab === 'terminal'" class="terminal-content">
-        <div class="terminal-line" :style="{ fontSize: fontSize + 'px' }">
-          <span class="prompt">$ </span>
-          <span>node main.js</span>
-        </div>
-        <div class="terminal-line" :style="{ fontSize: fontSize + 'px' }">
-          <span class="output-text">Hello, World!</span>
-        </div>
-        <div class="terminal-line current" :style="{ fontSize: fontSize + 'px' }">
-          <span class="prompt">$ </span>
-          <span class="cursor">|</span>
         </div>
       </div>
     </div>
@@ -146,12 +121,6 @@ const clearOutput = () => {
 
 .tab-icon {
   font-size: 14px;
-}
-
-.panel-actions {
-  display: flex;
-  gap: 4px;
-  padding: 8px;
 }
 
 .action-btn {
