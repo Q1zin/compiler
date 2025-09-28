@@ -6,6 +6,18 @@ export interface FileInfo {
   modified: boolean;
 }
 
+// Типы для вкладок файлов
+export interface FileTab {
+  id: string;
+  name: string;
+  path: string;
+  content: string;
+  isModified: boolean;
+  isActive: boolean;
+  language?: string;
+  created: Date;
+}
+
 // Типы для меню
 export type MenuAction = 
   | 'new' 
@@ -13,6 +25,8 @@ export type MenuAction =
   | 'save' 
   | 'save-as' 
   | 'close'
+  | 'close-all'
+  | 'close-others'
   | 'task'
   | 'bibliography'
   | 'source-code'
@@ -48,7 +62,8 @@ export interface OutputTab {
 
 // Типы для состояния приложения
 export interface AppState {
-  currentFile: FileInfo | null;
+  tabs: FileTab[];
+  activeTabId: string | null;
   recentFiles: FileInfo[];
   editorSettings: EditorSettings;
   output: ProgramOutput[];
@@ -71,4 +86,10 @@ export interface EditorEvents {
 export interface OutputEvents {
   'clear-output': () => void;
   'tab-change': (tabId: string) => void;
+}
+
+export interface TabEvents {
+  'tab-select': (tabId: string) => void;
+  'tab-close': (tabId: string) => void;
+  'tab-new': () => void;
 }

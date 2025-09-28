@@ -57,10 +57,6 @@ const handleTab = (event: KeyboardEvent) => {
 
 <template>
   <div class="code-editor">
-    <div class="editor-header">
-      <span class="file-name">test.txt</span>
-    </div>
-    
     <div class="editor-content">
       <div 
         ref="lineNumbers" 
@@ -97,42 +93,6 @@ const handleTab = (event: KeyboardEvent) => {
   flex-direction: column;
   height: 100%;
   background: #1e1e1e;
-}
-
-.editor-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #2d2d30;
-  padding: 8px 16px;
-  border-bottom: 1px solid #3e3e3e;
-  font-size: 12px;
-}
-
-.file-name {
-  color: #d4d4d4;
-  font-weight: 500;
-}
-
-.editor-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px;
-  border-radius: 2px;
-  transition: all 0.2s;
-}
-
-.action-btn:hover {
-  background: #3e3e3e;
-  color: #d4d4d4;
 }
 
 .editor-content {

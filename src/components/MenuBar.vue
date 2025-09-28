@@ -63,8 +63,15 @@ const handleFontChange = (change: number) => {
           </div>
           <div class="dropdown-separator"></div>
           <div class="dropdown-item" @click="handleAction('file', 'close')">
-            <span>Закрыть</span>
+            <span>Закрыть вкладку</span>
             <span class="shortcut">Ctrl+W</span>
+          </div>
+          <div class="dropdown-item" @click="handleAction('file', 'close-all')">
+            <span>Закрыть все</span>
+            <span class="shortcut">Ctrl+Shift+W</span>
+          </div>
+          <div class="dropdown-item" @click="handleAction('file', 'close-others')">
+            <span>Закрыть остальные</span>
           </div>
         </div>
       </div>
@@ -109,6 +116,12 @@ const handleFontChange = (change: number) => {
               <button @click="handleFontChange(1)" class="font-btn">A+</button>
             </div>
           </div>
+          <div class="dropdown-separator"></div>
+          <div class="dropdown-header">Вкладки</div>
+          <div class="dropdown-item" @click="handleAction('file', 'new')">
+            <span>Новая вкладка</span>
+            <span class="shortcut">Ctrl+T</span>
+          </div>
         </div>
       </div>
     </div>
@@ -139,6 +152,7 @@ const handleFontChange = (change: number) => {
   user-select: none;
   transition: background-color 0.2s;
   font-size: 13px;
+  color: #d4d4d4;
 }
 
 .menu-item:hover {
@@ -164,7 +178,7 @@ const handleFontChange = (change: number) => {
   border: 1px solid #3e3e3e;
   border-radius: 3px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  min-width: 200px;
+  min-width: 220px;
   z-index: 1001;
 }
 
@@ -175,6 +189,7 @@ const handleFontChange = (change: number) => {
   padding: 8px 16px;
   cursor: pointer;
   transition: background-color 0.2s;
+  color: #d4d4d4;
 }
 
 .dropdown-item:hover {
@@ -187,6 +202,7 @@ const handleFontChange = (change: number) => {
   color: #888;
   text-transform: uppercase;
   border-bottom: 1px solid #3e3e3e;
+  background: #252526;
 }
 
 .dropdown-separator {
