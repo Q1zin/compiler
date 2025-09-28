@@ -22,10 +22,11 @@ const {
   createNewTab,
   setActiveTab,
   closeTab,
+  closeAllTabs,
+  closeOtherTabs,
   updateActiveTabContent,
   
   // Файловые операции
-  openFile,
   saveActiveTab,
   saveActiveTabAs,
   
@@ -72,6 +73,14 @@ const handleFileAction = async (action: string) => {
     case 'close':
       if (activeTabId.value) {
         closeTab(activeTabId.value)
+      }
+      break
+    case 'close-all':
+      closeAllTabs()
+      break
+    case 'close-others':
+      if (activeTabId.value) {
+        closeOtherTabs(activeTabId.value)
       }
       break
   }
