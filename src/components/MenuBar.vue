@@ -43,7 +43,7 @@ const handleFontChange = (change: number) => {
       <!-- Файл -->
       <div class="menu-item" @click="toggleMenu('file')">
         <span>Файл</span>
-        <div v-if="activeMenu === 'file'" class="dropdown">
+        <div v-if="activeMenu === 'file'" class="dropdown" @click.stop>
           <div class="dropdown-item" @click="handleAction('file', 'new')">
             <span>Создать</span>
             <span class="shortcut">Ctrl+N</span>
@@ -79,7 +79,7 @@ const handleFontChange = (change: number) => {
       <!-- Текст -->
       <div class="menu-item" @click="toggleMenu('text')">
         <span>Текст</span>
-        <div v-if="activeMenu === 'text'" class="dropdown">
+        <div v-if="activeMenu === 'text'" class="dropdown" @click.stop>
           <div class="dropdown-item" @click="handleAction('text', 'task')">
             <span>Постановка задачи</span>
           </div>
@@ -100,7 +100,7 @@ const handleFontChange = (change: number) => {
       <!-- Вид -->
       <div class="menu-item" @click="toggleMenu('view')">
         <span>Вид</span>
-        <div v-if="activeMenu === 'view'" class="dropdown">
+        <div v-if="activeMenu === 'view'" class="dropdown" @click.stop>
           <div class="dropdown-header">Размер текста</div>
           <div class="dropdown-item font-controls">
             <span>Окно кода</span>

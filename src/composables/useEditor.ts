@@ -1,5 +1,9 @@
 import { ref, reactive, computed } from 'vue';
 import type { FileTab, EditorSettings, ProgramOutput } from '../types';
+import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { readTextFile } from '@tauri-apps/plugin-fs'
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
+
 
 export function useEditor() {
   // Состояние табов
@@ -38,6 +42,9 @@ export function useEditor() {
     return `tab-${++tabCounter}-${Date.now()}`;
   };
 
+  // Таймеры для авто-сброса подтверждения закрытия
+  const confirmTimers = new Map<string, number>();
+
   // Создание нового таба
   const createNewTab = (name?: string, content?: string, path?: string): FileTab => {
     const tabId = generateTabId();
@@ -46,9 +53,11 @@ export function useEditor() {
       name: name || `Untitled-${tabs.value.length + 1}`,
       path: path || '',
       content: content || '// Новый файл\nconsole.log("Hello, World!");',
-      isModified: false,
+      // Новые (без пути) считаются изменёнными по умолчанию
+      isModified: !path,
       isActive: false,
-      created: new Date()
+      created: new Date(),
+      confirmClosePending: false
     };
 
     tabs.value.push(newTab);
@@ -74,12 +83,37 @@ export function useEditor() {
     
     // Проверка несохранённых изменений
     if (tab.isModified) {
-      // В реальном приложении здесь будет диалог подтверждения
-      console.log(`Предупреждение: есть несохранённые изменения в файле "${tab.name}"`);
+      if (!tab.confirmClosePending) {
+        tab.confirmClosePending = true;
+        // Авто-сброс через 5 секунд
+        if (confirmTimers.has(tab.id)) {
+          const t = confirmTimers.get(tab.id)!;
+          window.clearTimeout(t);
+        }
+        const timeoutId = window.setTimeout(() => {
+          const target = tabs.value.find(t => t.id === tab.id);
+          if (target) target.confirmClosePending = false;
+          confirmTimers.delete(tab.id);
+        }, 5000);
+        confirmTimers.set(tab.id, timeoutId);
+        addOutput({
+          type: 'warning',
+          message: `Предупреждение: есть несохранённые изменения в файле "${tab.name}". Нажмите ещё раз, чтобы закрыть.`,
+          timestamp: new Date()
+        });
+        return;
+      }
+      // Второй клик: закроем без сохранения
     }
 
     // Удаляем таб
     tabs.value.splice(tabIndex, 1);
+    // Очистим таймер подтверждения, если был
+    if (confirmTimers.has(tabId)) {
+      const t = confirmTimers.get(tabId)!;
+      window.clearTimeout(t);
+      confirmTimers.delete(tabId);
+    }
 
     // Если закрыли активный таб, переключаемся на другой
     if (tabId === activeTabId.value) {
@@ -91,11 +125,6 @@ export function useEditor() {
         activeTabId.value = null;
       }
     }
-
-    // Если закрыли последний таб, создаём новый
-    if (tabs.value.length === 0) {
-      createNewTab();
-    }
   };
 
   // Закрытие всех табов
@@ -106,7 +135,6 @@ export function useEditor() {
     
     tabs.value = [];
     activeTabId.value = null;
-    createNewTab();
   };
 
   // Закрытие других табов
@@ -133,6 +161,15 @@ export function useEditor() {
 
     tab.content = content;
     tab.isModified = true;
+    // Меняем контент — сбрасываем ожидание подтверждения
+    if (tab.confirmClosePending) {
+      tab.confirmClosePending = false;
+      if (confirmTimers.has(tab.id)) {
+        const t = confirmTimers.get(tab.id)!;
+        window.clearTimeout(t);
+        confirmTimers.delete(tab.id);
+      }
+    }
   };
 
   // Файловые операции
@@ -185,6 +222,15 @@ export function useEditor() {
       console.log('Сохранение файла:', tab.path);
       
       tab.isModified = false;
+      // Сбрасываем подтверждение после сохранения
+      if (tab.confirmClosePending) {
+        tab.confirmClosePending = false;
+        if (confirmTimers.has(tab.id)) {
+          const t = confirmTimers.get(tab.id)!;
+          window.clearTimeout(t);
+          confirmTimers.delete(tab.id);
+        }
+      }
       
       addOutput({
         type: 'output',
@@ -212,6 +258,14 @@ export function useEditor() {
       const newPath = `/path/to/${tab.name}`;
       tab.path = newPath;
       tab.isModified = false;
+      if (tab.confirmClosePending) {
+        tab.confirmClosePending = false;
+        if (confirmTimers.has(tab.id)) {
+          const t = confirmTimers.get(tab.id)!;
+          window.clearTimeout(t);
+          confirmTimers.delete(tab.id);
+        }
+      }
       
       addOutput({
         type: 'output',
@@ -311,6 +365,36 @@ export function useEditor() {
     settings.tabSize = Math.max(2, Math.min(8, size));
   };
 
+  async function openFileFromDisk() {
+    const selected = await openDialog({
+      multiple: false,
+      directory: false,
+    })
+    if (!selected || Array.isArray(selected)) return
+  const path = selected
+    const content = await readTextFile(path)
+    // Если вкладка пустая — заполним её, иначе создадим новую
+    if (activeTab.value && !activeTab.value.path && !activeTab.value.content) {
+      activeTab.value.path = path
+      activeTab.value.name = path.split('/').pop() || path // фикс: имя, а не path
+      updateActiveTabContent(content)
+    } else {
+      const title = path.split('/').pop() || path
+      // Передаём path сразу, чтобы вкладка считалась сохранённой (не изменённой)
+      createNewTab(title, content, path)
+    }
+  }
+
+  async function openActiveFileExternally() {
+    const path = activeTab.value?.path
+    if (path) await openPath(path)
+  }
+
+  async function revealActiveFileInFolder() {
+    const path = activeTab.value?.path
+    if (path) await revealItemInDir(path)
+  }
+
   // Текстовые операции
   const insertTaskTemplate = () => {
     const template = `/*
@@ -373,11 +457,7 @@ export function useEditor() {
   };
 
   // Инициализация с одним табом
-  const initialize = () => {
-    if (tabs.value.length === 0) {
-      createNewTab('App_1', '// Добро пожаловать в редактор кода\nconsole.log("Hello, World!");');
-    }
-  };
+  const initialize = () => {};
 
   // Инициализируем при создании
   initialize();
@@ -426,6 +506,10 @@ export function useEditor() {
     addSourceCodeComment,
     
     // Инициализация
-    initialize
+    initialize,
+
+    openFileFromDisk,
+    openActiveFileExternally,
+    revealActiveFileInFolder,
   };
 }

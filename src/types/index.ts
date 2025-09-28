@@ -16,6 +16,7 @@ export interface FileTab {
   isActive: boolean;
   language?: string;
   created: Date;
+  confirmClosePending?: boolean;
 }
 
 // Типы для меню
@@ -92,4 +93,5 @@ export interface TabEvents {
   'tab-select': (tabId: string) => void;
   'tab-close': (tabId: string) => void;
   'tab-new': () => void;
+  path?: string;
 }

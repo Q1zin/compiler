@@ -38,7 +38,11 @@ const {
   // Текстовые операции
   insertTaskTemplate,
   insertBibliography,
-  addSourceCodeComment
+  addSourceCodeComment,
+
+  openFileFromDisk,
+  openActiveFileExternally,
+  revealActiveFileInFolder
 } = useEditor()
 
 // Обработчики событий меню
@@ -50,7 +54,14 @@ const handleFileAction = async (action: string) => {
       createNewTab()
       break
     case 'open':
-      await openFile()
+      await openFileFromDisk()
+      // await openFile()
+      break
+    case 'openExternally':
+      await openActiveFileExternally()
+      break
+    case 'revealInFolder':
+      await revealActiveFileInFolder()
       break
     case 'save':
       await saveActiveTab()
@@ -143,7 +154,7 @@ const activeFileName = computed(() =>
           <span class="file-name">{{ activeFileName }}</span>
           <div class="editor-status">
             <span v-if="activeTab?.isModified" class="modified-indicator">Изменён</span>
-            <span v-if="isRunning" class="running-indicator">🔄 Выполняется...</span>
+            <span v-if="isRunning" class="running-indicator">Выполняется...</span>
           </div>
         </div>
         
@@ -159,10 +170,10 @@ const activeFileName = computed(() =>
             <h3>Добро пожаловать в редактор кода</h3>
             <p>Создайте новый файл или откройте существующий</p>
             <div class="quick-actions">
-              <button @click="createNewTab" class="action-button primary">
+              <button @click="createNewTab()" class="action-button primary">
                 📄 Новый файл
               </button>
-              <button @click="openFile" class="action-button">
+              <button @click="openFileFromDisk()" class="action-button">
                 📂 Открыть файл
               </button>
             </div>
