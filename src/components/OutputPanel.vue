@@ -108,9 +108,13 @@ const selectTab = (tabId: 'output' | 'errors') => {
                 {{ p.message }}
               </div>
               <div v-if="p.line || p.column || p.file" class="problem-meta" :style="{ fontSize: (fontSize - 2) + 'px' }">
-                <span v-if="p.file" class="meta-file">{{ p.file }}</span>
-                <span v-if="p.line">строка: {{ p.line }}</span>
-                <span v-if="p.column">столбец: {{ p.column }}</span>
+                <div v-if="p.file" class="meta-row">
+                  <span class="meta-file">{{ p.file }}</span>
+                </div>
+                <div v-if="p.line || p.column" class="meta-row">
+                  <span v-if="p.line">line: {{ p.line }}</span>
+                  <span v-if="p.column">column: {{ p.column }}</span>
+                </div>
               </div>
               <div class="problem-time" :style="{ fontSize: (fontSize - 3) + 'px' }">{{ new Date(p.timestamp).toLocaleTimeString() }}</div>
             </div>
@@ -254,12 +258,19 @@ const selectTab = (tabId: 'output' | 'errors') => {
 .problem-meta {
   color: #888;
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
   margin-top: 4px;
 }
 
 .meta-file {
   color: #569cd6;
+}
+
+.meta-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .problem-time {
@@ -277,6 +288,7 @@ const selectTab = (tabId: 'output' | 'errors') => {
 
 .success-icon {
   font-size: 16px;
+  line-height: 1px;
 }
 
 .success-banner {

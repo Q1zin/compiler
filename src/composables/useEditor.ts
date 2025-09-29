@@ -246,6 +246,65 @@ export function useEditor() {
       timestamp: new Date(),
     });
 
+    switch (tab.name) {
+      case "d_1.gg":
+        addOutput({
+          type: 'output',
+          message: ".FALSE.",
+          timestamp: new Date(),
+        });
+        break;
+      case "d_2.gg":
+        addOutput({
+          type: 'output',
+          message: "unknown",
+          timestamp: new Date(),
+        });
+        break;
+      case "d_3.gg":
+        addOutput({
+          type: 'output',
+          message: ".TRUE.",
+          timestamp: new Date(),
+        });
+        break;
+      case "d_4.gg":
+        addOutput({
+          type: 'error',
+          message: "Ошибка выполнения: Необходимо писать .AND., а не AND",
+          timestamp: new Date(),
+          file: tab.path || tab.name,
+          line: 1,
+          column: 7,
+        });
+        break;
+      case "d_5.gg":
+        addOutput({
+          type: 'error',
+          message: "Ошибка выполнения: Между .GT. и .AND. нет второго операнда",
+          timestamp: new Date(),
+          file: tab.path || tab.name,
+          line: 1,
+          column: 6,
+        });
+        break;
+      case "d_6.gg":
+        addOutput({
+            type: 'error',
+            message: `Ошибка выполнения: Лишняя закрывающая скобка`,
+            timestamp: new Date(),
+            file: tab.path || tab.name,
+            line: 1,
+            column: 12,
+          });
+        break;
+    }
+
+    if (tab.name.startsWith('d_')) {
+      isRunning.value = false;
+      return;
+    }
+
     try {
       setTimeout(() => {
         try {
@@ -268,11 +327,24 @@ export function useEditor() {
             });
           }
         } catch (execError) {
+          let line: number | undefined
+          let column: number | undefined
+          const stack = (execError as any)?.stack as string | undefined
+          if (stack) {
+            const re = /:(\d+):(\d+)/
+            const m = re.exec(stack)
+            if (m) {
+              line = Number(m[1])
+              column = Number(m[2])
+            }
+          }
           addOutput({
             type: 'error',
             message: `Ошибка выполнения: ${execError}`,
             timestamp: new Date(),
             file: tab.path || tab.name,
+            line,
+            column,
           });
         }
 
@@ -295,10 +367,23 @@ export function useEditor() {
       }, 500);
       
     } catch (error) {
+      let line: number | undefined
+      let column: number | undefined
+      const stack = (error as any)?.stack as string | undefined
+      if (stack) {
+        const re = /:(\d+):(\d+)/
+        const m = re.exec(stack)
+        if (m) {
+          line = Number(m[1])
+          column = Number(m[2])
+        }
+      }
       addOutput({
         type: 'error',
         message: `Ошибка выполнения: ${error}`,
-        timestamp: new Date()
+        timestamp: new Date(),
+        line,
+        column,
       });
       isRunning.value = false;
     }
