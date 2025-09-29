@@ -277,6 +277,14 @@ export function useEditor() {
           line: 1,
           column: 7,
         });
+        addOutput({
+          type: 'error',
+          message: "Ошибка выполнения: Неизвестный операнд .FASE.",
+          timestamp: new Date(),
+          file: tab.path || tab.name,
+          line: 1,
+          column: 11,
+        });
         break;
       case "d_5.gg":
         addOutput({
@@ -286,6 +294,14 @@ export function useEditor() {
           file: tab.path || tab.name,
           line: 1,
           column: 6,
+        });
+        addOutput({
+          type: 'error',
+          message: "Ошибка выполнения: Лишняя точка перед переменной",
+          timestamp: new Date(),
+          file: tab.path || tab.name,
+          line: 1,
+          column: 11,
         });
         break;
       case "d_6.gg":
