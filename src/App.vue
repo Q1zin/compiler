@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import MenuBar from './components/MenuBar.vue'
 import TabManager from './components/TabManager.vue'
 import CodeEditor from './components/CodeEditor.vue'
 import OutputPanel from './components/OutputPanel.vue'
+import TextModal from './components/TextModal.vue'
 import { useEditor } from './composables/useEditor.ts'
+import { getTaskTemplate, getBibliographyTemplate, getSourceCodeHeaderTemplate } from './templates/textTemplates'
 
 const {
   // Состояние табов
@@ -95,13 +97,23 @@ const handleTextAction = (action: string) => {
   
   switch (action) {
     case 'task':
-      insertTaskTemplate()
+      // Откроем модалку с заголовком и текстом
+      modalTitle.value = 'Постановка задачи'
+      modalText.value = getTaskTemplate()
+      modalKind.value = 'task'
+      showTextModal.value = true
       break
     case 'bibliography':
-      insertBibliography()
+      modalTitle.value = 'Список литературы'
+      modalText.value = getBibliographyTemplate()
+      modalKind.value = 'bibliography'
+      showTextModal.value = true
       break
     case 'source-code':
-      addSourceCodeComment()
+      modalTitle.value = 'Исходный код программы'
+      modalText.value = getSourceCodeHeaderTemplate()
+      modalKind.value = 'source-code'
+      showTextModal.value = true
       break
   }
 }
@@ -152,6 +164,24 @@ const handleOutputTabChange = (tabId: string) => {
   // установим активную вкладку в состоянии composable
   // напрямую изменяем ref
   outputActiveTab.value = tabId as 'output' | 'errors'
+}
+
+// Модалка текста
+const showTextModal = ref(false)
+const modalTitle = ref('')
+const modalText = ref('')
+const modalKind = ref<'task' | 'bibliography' | 'source-code' | null>(null)
+const closeTextModal = () => { showTextModal.value = false }
+const insertTextFromModal = () => {
+  // Вставим готовый шаблон через соответствующую функцию
+  if (!activeTab.value) {
+    // создадим пустую вкладку, без шаблонного содержимого
+    createNewTab(undefined, '')
+  }
+  if (modalKind.value === 'task') insertTaskTemplate()
+  else if (modalKind.value === 'bibliography') insertBibliography()
+  else if (modalKind.value === 'source-code') addSourceCodeComment()
+  showTextModal.value = false
 }
 </script>
 
@@ -212,6 +242,14 @@ const handleOutputTabChange = (tabId: string) => {
         class="output-section"
         @clear-output="clearOutputOnly()"
         @tab-change="handleOutputTabChange"
+      />
+  
+      <TextModal
+        :show="showTextModal"
+        :title="modalTitle"
+        :text="modalText"
+        @close="closeTextModal"
+        @insert="insertTextFromModal"
       />
     </div>
   </div>

@@ -3,6 +3,7 @@ import type { FileTab, EditorSettings, ProgramOutput } from '../types';
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
+import { getTaskTemplate, getBibliographyTemplate, getSourceCodeHeaderTemplate } from '../templates/textTemplates';
 
 
 export function useEditor() {
@@ -56,7 +57,8 @@ export function useEditor() {
       id: tabId,
       name: name || `Untitled-${tabs.value.length + 1}`,
       path: path || '',
-      content: content || '// Новый файл\nconsole.log("Hello, World!");',
+  // сохраняем пустую строку как валидный контент; используем шаблон только если content === undefined
+  content: content ?? '// Новый файл\nconsole.log("Hello, World!");',
       // Новые (без пути) считаются изменёнными по умолчанию
       isModified: !path,
       isActive: false,
@@ -443,25 +445,7 @@ export function useEditor() {
 
   // Текстовые операции
   const insertTaskTemplate = () => {
-    const template = `/*
-ПОСТАНОВКА ЗАДАЧИ
-
-Цель: Описать цель программы
-
-Входные данные:
-- Параметр 1: описание
-- Параметр 2: описание
-
-Выходные данные:
-- Результат: описание
-
-Алгоритм:
-1. Шаг 1
-2. Шаг 2
-3. Шаг 3
-*/
-
-`;
+    const template = `/*\n${getTaskTemplate()}\n*/`;
     const tab = activeTab.value;
     if (tab) {
       tab.content = template + tab.content;
@@ -470,15 +454,7 @@ export function useEditor() {
   };
 
   const insertBibliography = () => {
-    const bibliography = `
-/*
-СПИСОК ЛИТЕРАТУРЫ
-
-1. Автор А.А. Название книги. - М.: Издательство, 2023. - 300 с.
-2. Автор Б.Б. Статья в журнале // Название журнала. - 2023. - №1. - С. 15-25.
-3. Интернет-ресурс: https://example.com - Название ресурса
-*/`;
-    
+    const bibliography = `/*\n${getBibliographyTemplate()}\n*/`;
     const tab = activeTab.value;
     if (tab) {
       tab.content = tab.content + '\n\n' + bibliography;
@@ -487,14 +463,7 @@ export function useEditor() {
   };
 
   const addSourceCodeComment = () => {
-    const comment = `/*
-=== ИСХОДНЫЙ КОД ПРОГРАММЫ ===
-Автор: 
-Дата создания: ${new Date().toLocaleDateString()}
-Версия: 1.0
-*/
-
-`;
+    const comment = `/*\n${getSourceCodeHeaderTemplate()}\n*/`;
     const tab = activeTab.value;
     if (tab) {
       tab.content = comment + tab.content;

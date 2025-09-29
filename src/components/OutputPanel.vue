@@ -75,7 +75,7 @@ const selectTab = (tabId: 'output' | 'errors') => {
         </button>
       </div>
       <div style="margin-left:auto; padding-right:8px;">
-        <button v-if="currentTab === 'output'" class="action-btn" @click="clearOutput">🧹 Очистить</button>
+        <button v-if="currentTab === 'output'" class="action-btn" @click="clearOutput">Очистить</button>
       </div>
     </div>
     
