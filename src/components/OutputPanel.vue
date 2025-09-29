@@ -1,12 +1,28 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import type { ProgramOutput } from '../types'
 
 const props = defineProps<{
-  output: string
+  items?: ProgramOutput[]
+  output?: string
+  errors?: string
   fontSize: number
+  activeTab?: 'output' | 'errors'
 }>()
 
-const activeTab = ref('output')
+const emit = defineEmits<{
+  'clear-output': []
+  'tab-change': [tabId: string]
+}>()
+
+const currentTab = ref<'output' | 'errors'>(props.activeTab ?? 'output')
+
+watch(
+  () => props.activeTab,
+  (val) => {
+    if (val && val !== currentTab.value) currentTab.value = val
+  }
+)
 
 const tabs = [
   { id: 'output', name: 'Вывод', icon: '📄' },
@@ -14,12 +30,32 @@ const tabs = [
 ]
 
 const outputLines = computed(() => {
-  if (!props.output) return ['Программа ещё не запускалась...']
+  // Back-compat: if items are provided, assemble output from them
+  if (props.items && props.items.length) {
+    const lines = props.items.filter(i => i.type === 'output').map(i => i.message)
+    if (lines.length === 0) return []
+    return lines.join('\n').split('\n')
+  }
+  if (props.output === undefined || props.output === null) {
+    return ['Программа ещё не запускалась...']
+  }
+  if (props.output === '') {
+    return []
+  }
   return props.output.split('\n')
 })
 
+const problems = computed(() => (props.items ?? []).filter(i => i.type === 'error' || i.type === 'warning'))
+const hasProblems = computed(() => problems.value.length > 0)
+const hasSuccess = computed(() => (props.items ?? []).some(i => i.type === 'success'))
+
 const clearOutput = () => {
-  // Emit event to parent to clear output
+  emit('clear-output')
+}
+
+const selectTab = (tabId: 'output' | 'errors') => {
+  currentTab.value = tabId
+  emit('tab-change', tabId)
 }
 </script>
 
@@ -31,18 +67,21 @@ const clearOutput = () => {
           v-for="tab in tabs" 
           :key="tab.id"
           class="tab"
-          :class="{ active: activeTab === tab.id }"
-          @click="activeTab = tab.id"
+          :class="{ active: currentTab === tab.id }"
+          @click="selectTab(tab.id as 'output' | 'errors')"
         >
           <span class="tab-icon">{{ tab.icon }}</span>
           <span>{{ tab.name }}</span>
         </button>
       </div>
+      <div style="margin-left:auto; padding-right:8px;">
+        <button v-if="currentTab === 'output'" class="action-btn" @click="clearOutput">🧹 Очистить</button>
+      </div>
     </div>
     
     <div class="panel-content">
       <!-- Вывод программы -->
-      <div v-if="activeTab === 'output'" class="output-content">
+      <div v-if="currentTab === 'output'" class="output-content">
         <div 
           v-for="(line, index) in outputLines" 
           :key="index"
@@ -53,20 +92,40 @@ const clearOutput = () => {
         </div>
       </div>
       
-      <!-- Ошибки -->
-      <div v-else-if="activeTab === 'errors'" class="error-content">
-        <div class="error-message" :style="{ fontSize: fontSize + 'px' }">
-          <span class="error-icon">❌</span>
-          <div class="error-details">
-            <div class="error-title">SyntaxError: Unexpected token</div>
-            <div class="error-location">at line 5, column 12</div>
-            <div class="error-file">test.txt</div>
+      <!-- Ошибки / Предупреждения / Успех -->
+      <div v-else-if="currentTab === 'errors'" class="error-content">
+        <!-- Успешная компиляция -->
+        <div v-if="!hasProblems && hasSuccess" class="success-banner">
+          <span class="success-icon">✅</span>
+          <div class="success-text" :style="{ fontSize: fontSize + 'px' }">
+            Компиляция завершена успешно. Ошибок не найдено.
           </div>
         </div>
-        
-        <div class="no-errors" :style="{ fontSize: fontSize + 'px' }">
-          <span class="success-icon">✅</span>
-          <span>Ошибок не найдено</span>
+
+        <!-- Список проблем -->
+        <div v-else>
+          <div 
+            v-for="(p, idx) in problems" 
+            :key="idx"
+            :class="['problem-block', p.type]"
+          >
+            <div class="problem-icon">{{ p.type === 'error' ? '❌' : '⚠️' }}</div>
+            <div class="problem-body">
+              <div class="problem-title" :style="{ fontSize: (fontSize + 1) + 'px' }">
+                {{ p.message }}
+              </div>
+              <div v-if="p.line || p.column || p.file" class="problem-meta" :style="{ fontSize: (fontSize - 2) + 'px' }">
+                <span v-if="p.file" class="meta-file">{{ p.file }}</span>
+                <span v-if="p.line">строка: {{ p.line }}</span>
+                <span v-if="p.column">столбец: {{ p.column }}</span>
+              </div>
+              <div class="problem-time" :style="{ fontSize: (fontSize - 3) + 'px' }">{{ new Date(p.timestamp).toLocaleTimeString() }}</div>
+            </div>
+          </div>
+          <div v-if="!problems.length" class="no-errors" :style="{ fontSize: fontSize + 'px' }">
+            <span class="success-icon">✅</span>
+            <span>Ошибок и предупреждений нет</span>
+          </div>
         </div>
       </div>
     </div>
@@ -160,41 +219,59 @@ const clearOutput = () => {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
-.error-message {
+.problem-block {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 12px;
-  background: #2d1b1b;
-  border: 1px solid #5a2d2d;
-  border-radius: 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   margin-bottom: 12px;
 }
 
-.error-icon {
-  font-size: 16px;
-  flex-shrink: 0;
+.problem-block.error {
+  background: #2d1b1b;
+  border-color: #5a2d2d;
 }
 
-.error-details {
+.problem-block.warning {
+  background: #2b2b1b;
+  border-color: #5a5a2d;
+}
+
+.problem-icon {
+  font-size: 18px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.problem-body {
   flex: 1;
 }
 
-.error-title {
+.problem-title {
   color: #f48771;
-  font-weight: bold;
-  margin-bottom: 4px;
+  font-weight: 600;
 }
 
-.error-location {
+.problem-block.warning .problem-title {
+  color: #f9c23c;
+}
+
+.problem-meta {
   color: #888;
-  font-size: 12px;
-  margin-bottom: 2px;
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
 }
 
-.error-file {
+.meta-file {
   color: #569cd6;
-  font-size: 12px;
+}
+
+.problem-time {
+  color: #666;
+  margin-top: 2px;
 }
 
 .no-errors {
@@ -207,6 +284,20 @@ const clearOutput = () => {
 
 .success-icon {
   font-size: 16px;
+}
+
+.success-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #1f2d2a;
+  border: 1px solid #2d5a5a;
+  border-radius: 6px;
+}
+
+.success-text {
+  color: #4ec9b0;
 }
 
 .terminal-content {

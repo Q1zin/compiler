@@ -17,6 +17,7 @@ const {
   settings,
   output,
   isRunning,
+  outputActiveTab,
   
   // Операции с табами
   createNewTab,
@@ -44,7 +45,9 @@ const {
 
   openFileFromDisk,
   openActiveFileExternally,
-  revealActiveFileInFolder
+  revealActiveFileInFolder,
+  // вывод
+  clearOutputOnly,
 } = useEditor()
 
 // Обработчики событий меню
@@ -140,6 +143,16 @@ const editorCode = computed({
 const activeFileName = computed(() => 
   activeTab.value?.name || 'Нет открытых файлов'
 )
+
+// Структурированные элементы вывода
+const outputItems = computed(() => output.value)
+
+// Синхронизация активной вкладки панели вывода
+const handleOutputTabChange = (tabId: string) => {
+  // установим активную вкладку в состоянии composable
+  // напрямую изменяем ref
+  outputActiveTab.value = tabId as 'output' | 'errors'
+}
 </script>
 
 <template>
@@ -193,9 +206,12 @@ const activeFileName = computed(() =>
       </div>
       
       <OutputPanel 
-        :output="output.map((o: { message: any }) => o.message).join('\n')"
+        :items="outputItems"
         :font-size="settings.outputFontSize ?? settings.fontSize"
+        :active-tab="outputActiveTab"
         class="output-section"
+        @clear-output="clearOutputOnly()"
+        @tab-change="handleOutputTabChange"
       />
     </div>
   </div>

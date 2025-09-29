@@ -25,6 +25,8 @@ export function useEditor() {
   // Состояние вывода
   const output = ref<ProgramOutput[]>([]);
   const isRunning = ref(false);
+  // Какая вкладка OutputPanel активна
+  const outputActiveTab = ref<'output' | 'errors'>('output');
 
   // Вычисляемые свойства
   const activeTab = computed(() => 
@@ -96,12 +98,17 @@ export function useEditor() {
           const target = tabs.value.find(t => t.id === tab.id);
           if (target) target.confirmClosePending = false;
           confirmTimers.delete(tab.id);
+          // Убираем предупреждение, если таб не закрыт за 5 секунд
+          output.value = output.value.filter((o) => !(o.type === 'warning' && o.meta?.kind === 'unsaved-close' && o.meta?.tabId === tab.id));
         }, 5000);
         confirmTimers.set(tab.id, timeoutId);
+        // Удалим старые предупреждения такого типа для этой вкладки, чтобы не дублировать
+        output.value = output.value.filter((o) => !(o.type === 'warning' && o.meta?.kind === 'unsaved-close' && o.meta?.tabId === tab.id));
         addOutput({
           type: 'warning',
           message: `Предупреждение: есть несохранённые изменения в файле "${tab.name}". Нажмите ещё раз, чтобы закрыть.`,
           timestamp: new Date(),
+          meta: { kind: 'unsaved-close', tabId: tab.id },
         });
         return;
       }
@@ -116,6 +123,8 @@ export function useEditor() {
       window.clearTimeout(t);
       confirmTimers.delete(tabId);
     }
+    // Немедленно убираем предупреждение про несохранённые изменения для этого таба
+    output.value = output.value.filter((o) => !(o.type === 'warning' && o.meta?.kind === 'unsaved-close' && o.meta?.tabId === tabId));
 
     // Если закрыли активный таб, переключаемся на другой
     if (tabId === activeTabId.value) {
@@ -323,14 +332,25 @@ export function useEditor() {
             type: 'error',
             message: `Ошибка выполнения: ${execError}`,
             timestamp: new Date(),
+            file: tab.path || tab.name,
           });
         }
 
-        addOutput({
-          type: 'output',
-          message: 'Программа завершена',
-          timestamp: new Date()
-        });
+        // если нет ошибок после выполнения — покажем success в Errors вкладке
+        const hasProblem = output.value.some((o) => o.type === 'error' || o.type === 'warning');
+        if (!hasProblem) {
+          addOutput({
+            type: 'success',
+            message: 'Компиляция и выполнение завершены успешно. Ошибок не найдено.',
+            timestamp: new Date(),
+          });
+        } else {
+          addOutput({
+            type: 'output',
+            message: 'Программа завершена',
+            timestamp: new Date()
+          });
+        }
         
         isRunning.value = false;
       }, 500);
@@ -348,10 +368,27 @@ export function useEditor() {
   // Управление выводом
   const addOutput = (outputItem: ProgramOutput) => {
     output.value.push(outputItem);
+    // Переключаем вкладку: ошибки/предупреждения -> errors, success -> оставаться на "Вывод"
+    if (outputItem.type === 'error' || outputItem.type === 'warning') {
+      outputActiveTab.value = 'errors';
+    } else if (outputItem.type === 'success') {
+      // Явно оставим/переключим на вывод
+      outputActiveTab.value = 'output';
+    } else if (outputItem.type === 'output') {
+      // Не переключаем на вывод, если уже показываем вкладку ошибок
+      if (outputActiveTab.value !== 'errors') {
+        outputActiveTab.value = 'output';
+      }
+    }
   };
 
   const clearOutput = () => {
     output.value = [];
+  };
+
+  // Очистить только сообщения типа 'output' (оставить ошибки/предупреждения)
+  const clearOutputOnly = () => {
+    output.value = output.value.filter((item) => item.type !== 'output');
   };
 
   // Управление настройками
@@ -483,6 +520,7 @@ export function useEditor() {
     settings,
     output,
     isRunning,
+  outputActiveTab,
     
     // Операции с табами
     createNewTab,
@@ -502,7 +540,8 @@ export function useEditor() {
     
     // Управление выводом
     addOutput,
-    clearOutput,
+  clearOutput,
+  clearOutputOnly,
     
     // Настройки
   changeCodeFontSize,

@@ -20,7 +20,7 @@ const computedValue = computed({
 
 const lines = computed(() => {
   const lineCount = props.modelValue.split('\n').length
-  return Array.from({ length: Math.max(lineCount, 20) }, (_, i) => i + 1)
+  return Array.from({ length: Math.max(lineCount, 2) }, (_, i) => i + 1)
 })
 
 const handleScroll = (event: Event) => {

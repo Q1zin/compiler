@@ -49,11 +49,16 @@ export interface EditorSettings {
 
 // Типы для вывода программы
 export interface ProgramOutput {
-  type: 'output' | 'error' | 'warning';
+  type: 'output' | 'error' | 'warning' | 'success';
   message: string;
   timestamp: Date;
   line?: number;
   column?: number;
+  file?: string;
+  meta?: {
+    kind: string;
+    tabId?: string;
+  };
 }
 
 // Типы для вкладок панели вывода
