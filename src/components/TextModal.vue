@@ -36,7 +36,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
       </div>
     </div>
   </div>
-  
 </template>
 
 <style scoped>

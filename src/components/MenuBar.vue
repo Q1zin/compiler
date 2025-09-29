@@ -40,7 +40,6 @@ const handleFontChange = (area: 'code' | 'output', change: number) => {
 <template>
   <div class="menu-bar">
     <div class="menu-items">
-      <!-- Файл -->
       <div class="menu-item" @click="toggleMenu('file')">
         <span>Файл</span>
         <div v-if="activeMenu === 'file'" class="dropdown" @click.stop>
@@ -75,8 +74,6 @@ const handleFontChange = (area: 'code' | 'output', change: number) => {
           </div>
         </div>
       </div>
-
-      <!-- Текст -->
       <div class="menu-item" @click="toggleMenu('text')">
         <span>Текст</span>
         <div v-if="activeMenu === 'text'" class="dropdown" @click.stop>
@@ -91,13 +88,9 @@ const handleFontChange = (area: 'code' | 'output', change: number) => {
           </div>
         </div>
       </div>
-
-      <!-- Пуск -->
       <div class="menu-item run-button" @click="handleRun">
         <span>▶ Пуск</span>
       </div>
-
-      <!-- Вид -->
       <div class="menu-item" @click="toggleMenu('view')">
         <span>Вид</span>
         <div v-if="activeMenu === 'view'" class="dropdown" @click.stop>
@@ -126,8 +119,6 @@ const handleFontChange = (area: 'code' | 'output', change: number) => {
       </div>
     </div>
   </div>
-
-  <!-- Overlay для закрытия меню -->
   <div v-if="activeMenu" class="overlay" @click="closeMenu"></div>
 </template>
 

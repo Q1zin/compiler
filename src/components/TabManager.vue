@@ -36,7 +36,6 @@ const getTabDisplayName = (tab: FileTab) => {
 <template>
   <div class="tab-manager">
     <div class="tabs-container">
-      <!-- Вкладки файлов -->
       <div 
         v-for="tab in activeTabs" 
         :key="tab.id"
@@ -58,8 +57,6 @@ const getTabDisplayName = (tab: FileTab) => {
           ×
         </button>
       </div>
-      
-      <!-- Кнопка добавления новой вкладки -->
       <button 
         class="new-tab-btn"
         @click="createNewTab"

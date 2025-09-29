@@ -30,7 +30,6 @@ const tabs = [
 ]
 
 const outputLines = computed(() => {
-  // Back-compat: if items are provided, assemble output from them
   if (props.items && props.items.length) {
     const lines = props.items.filter(i => i.type === 'output').map(i => i.message)
     if (lines.length === 0) return []
@@ -80,7 +79,6 @@ const selectTab = (tabId: 'output' | 'errors') => {
     </div>
     
     <div class="panel-content">
-      <!-- Вывод программы -->
       <div v-if="currentTab === 'output'" class="output-content">
         <div 
           v-for="(line, index) in outputLines" 
@@ -91,18 +89,13 @@ const selectTab = (tabId: 'output' | 'errors') => {
           {{ line }}
         </div>
       </div>
-      
-      <!-- Ошибки / Предупреждения / Успех -->
       <div v-else-if="currentTab === 'errors'" class="error-content">
-        <!-- Успешная компиляция -->
         <div v-if="!hasProblems && hasSuccess" class="success-banner">
           <span class="success-icon">✅</span>
           <div class="success-text" :style="{ fontSize: fontSize + 'px' }">
             Компиляция завершена успешно. Ошибок не найдено.
           </div>
         </div>
-
-        <!-- Список проблем -->
         <div v-else>
           <div 
             v-for="(p, idx) in problems" 

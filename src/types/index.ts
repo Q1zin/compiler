@@ -1,4 +1,3 @@
-// Типы для файловых операций
 export interface FileInfo {
   name: string;
   path: string;
@@ -6,7 +5,6 @@ export interface FileInfo {
   modified: boolean;
 }
 
-// Типы для вкладок файлов
 export interface FileTab {
   id: string;
   name: string;
@@ -19,7 +17,6 @@ export interface FileTab {
   confirmClosePending?: boolean;
 }
 
-// Типы для меню
 export type MenuAction = 
   | 'new' 
   | 'open' 
@@ -35,9 +32,7 @@ export type MenuAction =
   | 'font-increase'
   | 'font-decrease';
 
-// Типы для настроек редактора
 export interface EditorSettings {
-  // Deprecated: use codeFontSize and outputFontSize
   fontSize: number;
   codeFontSize?: number;
   outputFontSize?: number;
@@ -46,8 +41,6 @@ export interface EditorSettings {
   wordWrap: boolean;
   showLineNumbers: boolean;
 }
-
-// Типы для вывода программы
 export interface ProgramOutput {
   type: 'output' | 'error' | 'warning' | 'success';
   message: string;
@@ -60,16 +53,12 @@ export interface ProgramOutput {
     tabId?: string;
   };
 }
-
-// Типы для вкладок панели вывода
 export interface OutputTab {
   id: string;
   name: string;
   icon: string;
   count?: number;
 }
-
-// Типы для состояния приложения
 export interface AppState {
   tabs: FileTab[];
   activeTabId: string | null;
@@ -78,8 +67,6 @@ export interface AppState {
   output: ProgramOutput[];
   isRunning: boolean;
 }
-
-// События компонентов
 export interface MenuEvents {
   'file-action': (action: MenuAction) => void;
   'text-action': (action: MenuAction) => void;

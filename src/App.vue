@@ -9,50 +9,34 @@ import { useEditor } from './composables/useEditor.ts'
 import { getTaskTemplate, getBibliographyTemplate, getSourceCodeHeaderTemplate } from './templates/textTemplates'
 
 const {
-  // Состояние табов
   tabs,
   activeTabId,
   activeTab,
   activeTabContent,
-  
-  // Настройки
   settings,
   output,
   isRunning,
   outputActiveTab,
-  
-  // Операции с табами
   createNewTab,
   setActiveTab,
   closeTab,
   closeAllTabs,
   closeOtherTabs,
   updateActiveTabContent,
-  
-  // Файловые операции
   saveActiveTab,
   saveActiveTabAs,
-  
-  // Выполнение кода
   runCode,
-  
-  // Настройки
   changeCodeFontSize,
   changeOutputFontSize,
-  
-  // Текстовые операции
   insertTaskTemplate,
   insertBibliography,
   addSourceCodeComment,
-
   openFileFromDisk,
   openActiveFileExternally,
   revealActiveFileInFolder,
-  // вывод
   clearOutputOnly,
 } = useEditor()
 
-// Обработчики событий меню
 const handleFileAction = async (action: string) => {
   console.log('File action:', action)
   
@@ -62,7 +46,6 @@ const handleFileAction = async (action: string) => {
       break
     case 'open':
       await openFileFromDisk()
-      // await openFile()
       break
     case 'openExternally':
       await openActiveFileExternally()
@@ -97,7 +80,6 @@ const handleTextAction = (action: string) => {
   
   switch (action) {
     case 'task':
-      // Откроем модалку с заголовком и текстом
       modalTitle.value = 'Постановка задачи'
       modalText.value = getTaskTemplate()
       modalKind.value = 'task'
@@ -127,7 +109,6 @@ const handleFontSizeChange = (area: 'code' | 'output', change: number) => {
   else changeOutputFontSize(change)
 }
 
-// Обработчики событий табов
 const handleTabSelect = (tabId: string) => {
   setActiveTab(tabId)
 }
@@ -140,42 +121,32 @@ const handleTabNew = () => {
   createNewTab()
 }
 
-// Обработка изменений кода
 const handleCodeUpdate = (newCode: string) => {
   updateActiveTabContent(newCode)
 }
 
-// Вычисляемое свойство для передачи в редактор
 const editorCode = computed({
   get: () => activeTabContent.value,
   set: (value: string) => handleCodeUpdate(value)
 })
 
-// Название активного файла для отображения
 const activeFileName = computed(() => 
   activeTab.value?.name || 'Нет открытых файлов'
 )
 
-// Структурированные элементы вывода
 const outputItems = computed(() => output.value)
 
-// Синхронизация активной вкладки панели вывода
 const handleOutputTabChange = (tabId: string) => {
-  // установим активную вкладку в состоянии composable
-  // напрямую изменяем ref
   outputActiveTab.value = tabId as 'output' | 'errors'
 }
 
-// Модалка текста
 const showTextModal = ref(false)
 const modalTitle = ref('')
 const modalText = ref('')
 const modalKind = ref<'task' | 'bibliography' | 'source-code' | null>(null)
 const closeTextModal = () => { showTextModal.value = false }
 const insertTextFromModal = () => {
-  // Вставим готовый шаблон через соответствующую функцию
   if (!activeTab.value) {
-    // создадим пустую вкладку, без шаблонного содержимого
     createNewTab(undefined, '')
   }
   if (modalKind.value === 'task') insertTaskTemplate()
