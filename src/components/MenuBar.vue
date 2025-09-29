@@ -6,6 +6,7 @@ const emit = defineEmits<{
   'text-action': [action: string]
   'run-code': []
   'font-size-change': [area: 'code' | 'output', change: number]
+  'toggle-theme': []
 }>()
 
 const activeMenu = ref<string | null>(null)
@@ -34,6 +35,11 @@ const handleRun = () => {
 
 const handleFontChange = (area: 'code' | 'output', change: number) => {
   emit('font-size-change', area, change)
+}
+
+const handleToggleTheme = () => {
+  closeMenu()
+  emit('toggle-theme')
 }
 </script>
 
@@ -110,6 +116,10 @@ const handleFontChange = (area: 'code' | 'output', change: number) => {
             </div>
           </div>
           <div class="dropdown-separator"></div>
+          <div class="dropdown-item" @click="handleToggleTheme">
+            <span>Переключить тему</span>
+          </div>
+          <div class="dropdown-separator"></div>
           <div class="dropdown-header">Вкладки</div>
           <div class="dropdown-item" @click="handleAction('file', 'new')">
             <span>Новая вкладка</span>
@@ -124,8 +134,8 @@ const handleFontChange = (area: 'code' | 'output', change: number) => {
 
 <style scoped>
 .menu-bar {
-  background: #2d2d30;
-  border-bottom: 1px solid #3e3e3e;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   padding: 0;
   position: relative;
   z-index: 1000;
@@ -143,30 +153,30 @@ const handleFontChange = (area: 'code' | 'output', change: number) => {
   user-select: none;
   transition: background-color 0.2s;
   font-size: 13px;
-  color: #d4d4d4;
+  color: var(--text-primary);
 }
 
 .menu-item:hover {
-  background: #3e3e3e;
+  background: var(--border-color);
 }
 
 .run-button {
-  background: #0e639c;
+  background: var(--accent);
   color: white;
   margin-left: 8px;
   border-radius: 3px;
 }
 
 .run-button:hover {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .dropdown {
   position: absolute;
   top: 100%;
   left: 0;
-  background: #2d2d30;
-  border: 1px solid #3e3e3e;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 3px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   min-width: 220px;
@@ -180,31 +190,31 @@ const handleFontChange = (area: 'code' | 'output', change: number) => {
   padding: 8px 16px;
   cursor: pointer;
   transition: background-color 0.2s;
-  color: #d4d4d4;
+  color: var(--text-primary);
 }
 
 .dropdown-item:hover {
-  background: #3e3e3e;
+  background: var(--border-color);
 }
 
 .dropdown-header {
   padding: 8px 16px;
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
   text-transform: uppercase;
-  border-bottom: 1px solid #3e3e3e;
-  background: #252526;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
 }
 
 .dropdown-separator {
   height: 1px;
-  background: #3e3e3e;
+  background: var(--border-color);
   margin: 4px 0;
 }
 
 .shortcut {
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .font-controls {
@@ -217,7 +227,7 @@ const handleFontChange = (area: 'code' | 'output', change: number) => {
 }
 
 .font-btn {
-  background: #0e639c;
+  background: var(--accent);
   color: white;
   border: none;
   padding: 2px 6px;
@@ -228,7 +238,7 @@ const handleFontChange = (area: 'code' | 'output', change: number) => {
 }
 
 .font-btn:hover {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .overlay {

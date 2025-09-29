@@ -134,15 +134,15 @@ const selectTab = (tabId: 'output' | 'errors') => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1e1e1e;
+  background: var(--bg-primary);
 }
 
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #2d2d30;
-  border-bottom: 1px solid #3e3e3e;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   padding: 0;
 }
 
@@ -165,14 +165,14 @@ const selectTab = (tabId: 'output' | 'errors') => {
 }
 
 .tab:hover {
-  background: #3e3e3e;
-  color: #d4d4d4;
+  background: var(--border-color);
+  color: var(--text-primary);
 }
 
 .tab.active {
-  color: #d4d4d4;
+  color: var(--text-primary);
   border-bottom-color: #0e639c;
-  background: #1e1e1e;
+  background: var(--bg-primary);
 }
 
 .tab-icon {
@@ -182,7 +182,7 @@ const selectTab = (tabId: 'output' | 'errors') => {
 .action-btn {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 2px;
@@ -191,8 +191,8 @@ const selectTab = (tabId: 'output' | 'errors') => {
 }
 
 .action-btn:hover {
-  background: #3e3e3e;
-  color: #d4d4d4;
+  background: var(--border-color);
+  color: var(--text-primary);
 }
 
 .panel-content {
@@ -206,7 +206,7 @@ const selectTab = (tabId: 'output' | 'errors') => {
 }
 
 .output-line {
-  color: #d4d4d4;
+  color: var(--text-primary);
   line-height: 1.5;
   margin-bottom: 2px;
   white-space: pre-wrap;
@@ -256,7 +256,7 @@ const selectTab = (tabId: 'output' | 'errors') => {
 }
 
 .problem-meta {
-  color: #888;
+  color: var(--text-muted);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -282,7 +282,7 @@ const selectTab = (tabId: 'output' | 'errors') => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #4ec9b0;
+  color: var(--success);
   padding: 8px;
 }
 
@@ -302,7 +302,7 @@ const selectTab = (tabId: 'output' | 'errors') => {
 }
 
 .success-text {
-  color: #4ec9b0;
+  color: var(--success);
 }
 
 .terminal-content {

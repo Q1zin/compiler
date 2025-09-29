@@ -92,7 +92,7 @@ const handleTab = (event: KeyboardEvent) => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1e1e1e;
+  background: var(--bg-primary);
 }
 
 .editor-content {
@@ -102,15 +102,15 @@ const handleTab = (event: KeyboardEvent) => {
 }
 
 .line-numbers {
-  background: #252526;
-  color: #858585;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   padding: 16px 8px;
   text-align: right;
   user-select: none;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   line-height: 1.5;
   min-width: 50px;
-  border-right: 1px solid #3e3e3e;
+  border-right: 1px solid var(--border-color);
   overflow: hidden;
 }
 
@@ -121,8 +121,8 @@ const handleTab = (event: KeyboardEvent) => {
 
 .code-textarea {
   flex: 1;
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   border: none;
   outline: none;
   padding: 16px;
@@ -136,7 +136,7 @@ const handleTab = (event: KeyboardEvent) => {
 }
 
 .code-textarea::placeholder {
-  color: #6a6a6a;
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -145,9 +145,7 @@ const handleTab = (event: KeyboardEvent) => {
   height: 12px;
 }
 
-.code-textarea::-webkit-scrollbar-track {
-  background: #1e1e1e;
-}
+.code-textarea::-webkit-scrollbar-track { background: var(--bg-primary); }
 
 .code-textarea::-webkit-scrollbar-thumb {
   background: #424242;
@@ -158,7 +156,5 @@ const handleTab = (event: KeyboardEvent) => {
   background: #4f4f4f;
 }
 
-.code-textarea::-webkit-scrollbar-corner {
-  background: #1e1e1e;
-}
+.code-textarea::-webkit-scrollbar-corner { background: var(--bg-primary); }
 </style>

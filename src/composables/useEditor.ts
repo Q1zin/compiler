@@ -442,6 +442,10 @@ export function useEditor() {
     settings.tabSize = Math.max(2, Math.min(8, size));
   };
 
+  const toggleTheme = () => {
+    settings.theme = settings.theme === 'dark' ? 'light' : 'dark'
+  }
+
   async function openFileFromDisk() {
     const selected = await openDialog({
       multiple: false,
@@ -529,6 +533,7 @@ export function useEditor() {
     changeOutputFontSize,
     toggleWordWrap,
     changeTabSize,
+  toggleTheme,
     insertTaskTemplate,
     insertBibliography,
     addSourceCodeComment,

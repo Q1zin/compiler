@@ -52,8 +52,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 .modal {
   width: min(800px, 90vw);
   max-height: 80vh;
-  background: #1e1e1e;
-  border: 1px solid #3e3e3e;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.4);
   display: flex;
@@ -65,24 +65,20 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #2d2d30;
-  border-bottom: 1px solid #3e3e3e;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
-.title {
-  margin: 0;
-  font-size: 16px;
-  color: #d4d4d4;
-}
+.title { margin: 0; font-size: 16px; color: var(--text-primary); }
 
 .icon-btn {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 14px;
 }
-.icon-btn:hover { color: #d4d4d4; }
+.icon-btn:hover { color: var(--text-primary); }
 
 .body {
   padding: 16px;
@@ -92,7 +88,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 .content {
   margin: 0;
   white-space: pre-wrap;
-  color: #d4d4d4;
+  color: var(--text-primary);
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.5;
@@ -103,11 +99,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
   gap: 8px;
   justify-content: flex-end;
   padding: 12px 16px;
-  border-top: 1px solid #3e3e3e;
+  border-top: 1px solid var(--border-color);
 }
 
 .btn {
-  background: #0e639c;
+  background: var(--accent);
   color: white;
   border: none;
   padding: 8px 12px;
@@ -115,10 +111,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
   cursor: pointer;
   font-size: 12px;
 }
-.btn:hover { background: #1177bb; }
+.btn:hover { background: var(--accent-hover); }
 
-.btn.secondary {
-  background: #3e3e3e;
-}
-.btn.secondary:hover { background: #4a4a4a; }
+.btn.secondary { background: var(--border-color); }
+.btn.secondary:hover { background: var(--accent-hover); }
 </style>

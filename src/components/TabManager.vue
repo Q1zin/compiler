@@ -70,8 +70,8 @@ const getTabDisplayName = (tab: FileTab) => {
 
 <style scoped>
 .tab-manager {
-  background: #2d2d30;
-  border-bottom: 1px solid #3e3e3e;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   overflow-x: auto;
   overflow-y: hidden;
 }
@@ -87,8 +87,8 @@ const getTabDisplayName = (tab: FileTab) => {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  background: #2d2d30;
-  border-right: 1px solid #3e3e3e;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
   cursor: pointer;
   user-select: none;
   transition: background-color 0.2s;
@@ -98,14 +98,9 @@ const getTabDisplayName = (tab: FileTab) => {
   font-size: 12px;
 }
 
-.tab:hover {
-  background: #3e3e3e;
-}
+.tab:hover { background: var(--border-color); }
 
-.tab.active {
-  background: #1e1e1e;
-  color: #d4d4d4;
-}
+.tab.active { background: var(--bg-primary); color: var(--text-primary); }
 
 .tab.modified .tab-name {
   font-style: italic;
@@ -121,17 +116,15 @@ const getTabDisplayName = (tab: FileTab) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #cccccc;
+  color: var(--text-primary);
 }
 
-.tab.active .tab-name {
-  color: #ffffff;
-}
+.tab.active .tab-name { color: var(--text-primary); }
 
 .tab-close {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 2px;
   border-radius: 2px;
@@ -151,34 +144,26 @@ const getTabDisplayName = (tab: FileTab) => {
   opacity: 1;
 }
 
-.tab-close:hover {
-  background: #f48771;
-  color: white;
-}
+.tab-close:hover { background: #f48771; color: white; }
 
 .new-tab-btn {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 6px 12px;
   font-size: 16px;
   transition: all 0.2s;
-  border-right: 1px solid #3e3e3e;
+  border-right: 1px solid var(--border-color);
 }
 
-.new-tab-btn:hover {
-  background: #3e3e3e;
-  color: #d4d4d4;
-}
+.new-tab-btn:hover { background: var(--border-color); color: var(--text-primary); }
 
 .tabs-container::-webkit-scrollbar {
   height: 3px;
 }
 
-.tabs-container::-webkit-scrollbar-track {
-  background: #2d2d30;
-}
+.tabs-container::-webkit-scrollbar-track { background: var(--bg-secondary); }
 
 .tabs-container::-webkit-scrollbar-thumb {
   background: #424242;

@@ -154,15 +154,20 @@ const insertTextFromModal = () => {
   else if (modalKind.value === 'source-code') addSourceCodeComment()
   showTextModal.value = false
 }
+
+const handleToggleTheme = () => {
+  settings.theme = settings.theme === 'dark' ? 'light' : 'dark'
+}
 </script>
 
 <template>
-  <div class="app">
+  <div :class="['app', `theme-${settings.theme}`]">
     <MenuBar 
       @file-action="handleFileAction"
       @text-action="handleTextAction"
       @run-code="handleRunCode"
       @font-size-change="handleFontSizeChange"
+      @toggle-theme="handleToggleTheme"
     />
     
     <TabManager 
@@ -231,8 +236,8 @@ const insertTextFromModal = () => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -244,7 +249,7 @@ const insertTextFromModal = () => {
 
 .code-section {
   flex: 1;
-  border-right: 1px solid #3e3e3e;
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
 }
@@ -253,15 +258,15 @@ const insertTextFromModal = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #2d2d30;
+  background: var(--bg-secondary);
   padding: 8px 16px;
-  border-bottom: 1px solid #3e3e3e;
+  border-bottom: 1px solid var(--border-color);
   font-size: 12px;
   min-height: 32px;
 }
 
 .file-name {
-  color: #d4d4d4;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
@@ -296,7 +301,7 @@ const insertTextFromModal = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1e1e1e;
+  background: var(--bg-primary);
 }
 
 .no-file-message {
@@ -305,14 +310,14 @@ const insertTextFromModal = () => {
 }
 
 .no-file-message h3 {
-  color: #d4d4d4;
+  color: var(--text-primary);
   margin-bottom: 12px;
   font-size: 20px;
   font-weight: 600;
 }
 
 .no-file-message p {
-  color: #888;
+  color: var(--text-muted);
   margin-bottom: 24px;
   font-size: 14px;
 }
@@ -324,9 +329,9 @@ const insertTextFromModal = () => {
 }
 
 .action-button {
-  background: #3e3e3e;
+  background: var(--border-color);
   border: none;
-  color: #d4d4d4;
+  color: var(--text-primary);
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
@@ -338,16 +343,16 @@ const insertTextFromModal = () => {
 }
 
 .action-button:hover {
-  background: #4a4a4a;
+  background: var(--accent-hover);
 }
 
 .action-button.primary {
-  background: #0e639c;
+  background: var(--accent);
   color: white;
 }
 
 .action-button.primary:hover {
-  background: #1177bb;
+  background: var(--accent-hover);
 }
 
 .output-section {
