@@ -352,10 +352,10 @@ const handleToggleTheme = () => {
 }
 
 .output-section {
-  flex: 0 0 40%;
-  width: 40%;
+  flex: 0 0 70%;
+  width: 70%;
   min-width: 40%;
-  max-width: 40%;
+  max-width: 70%;
 }
 
 * {

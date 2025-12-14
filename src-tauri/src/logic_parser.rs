@@ -694,4 +694,35 @@ mod tests {
         let res = validate_expression(".TRUE.\n.FALSE.");
         assert_eq!(res.messages.len(), 0, "messages: {:#?}", res.messages);
     }
+
+    #[test]
+    fn valid_chains_should_have_no_errors() {
+        let cases = [
+            ".TRUE.",
+            ".FALSE.",
+            "X.GT.0",
+            "X.LT.5",
+            "A1.GT.123",
+            "ABC123.LT.999",
+            ".TRUE..AND..FALSE.",
+            ".TRUE..OR..FALSE.",
+            "(X.GT.0)",
+            "(X.GT.0).AND.(Y.LT.5)",
+            "(X.GT.0.OR.Y.LT.5)",
+            "(X.GT.0).OR.(Y.LT.5).AND.(Z.GT.10)",
+            "((X.GT.0).AND.(Y.LT.5))",
+            "((X.GT.0).AND.(Y.LT.5)).OR.(.TRUE.)",
+            ".TRUE.\n.FALSE.\n(X.GT.0).AND.(Y.LT.5)",
+            "\n\n.TRUE.\n\n.FALSE.\n",
+        ];
+
+        for input in cases {
+            let res = validate_expression(input);
+            assert!(
+                res.messages.is_empty(),
+                "expected ok for input {input:?}, messages: {:#?}",
+                res.messages
+            );
+        }
+    }
 }
