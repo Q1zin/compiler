@@ -13,6 +13,8 @@ export function useEditor() {
   const activeTabId = ref<string | null>(null);
   let tabCounter = 0;
 
+  let validateTimer: number | null = null;
+
   const settings = reactive<EditorSettings>({
     fontSize: 14,
     codeFontSize: 14,
@@ -146,6 +148,35 @@ export function useEditor() {
         confirmTimers.delete(tab.id);
       }
     }
+
+    scheduleValidateActiveTab();
+  };
+
+  const scheduleValidateActiveTab = () => {
+    if (!activeTab.value) return;
+
+    if (validateTimer !== null) {
+      window.clearTimeout(validateTimer);
+      validateTimer = null;
+    }
+
+    const tabIdAtSchedule = activeTab.value.id;
+    validateTimer = window.setTimeout(async () => {
+      validateTimer = null;
+
+      const tab = tabs.value.find(t => t.id === tabIdAtSchedule);
+      if (!tab) return;
+
+      // Avoid concurrent runs; if still running, try again shortly.
+      if (isRunning.value) {
+        scheduleValidateActiveTab();
+        return;
+      }
+
+      isRunning.value = true;
+      clearOutput();
+      await validateFile(tab);
+    }, 200);
   };
 
   const saveActiveTab = async () => {
