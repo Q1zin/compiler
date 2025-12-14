@@ -209,6 +209,7 @@ const handleToggleTheme = () => {
       </div>
       
       <OutputPanel 
+        v-if="activeTab"
         :items="outputItems"
         :font-size="settings.outputFontSize ?? settings.fontSize"
         class="output-section"
@@ -351,9 +352,10 @@ const handleToggleTheme = () => {
 }
 
 .output-section {
-  width: 400px;
-  min-width: 300px;
-  max-width: 50%;
+  flex: 0 0 40%;
+  width: 40%;
+  min-width: 40%;
+  max-width: 40%;
 }
 
 * {

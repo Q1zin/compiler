@@ -12,6 +12,21 @@ const emit = defineEmits<{
 }>()
 
 const problems = computed(() => (props.items ?? []).filter(i => i.type === 'error'))
+
+const detectParser = (p: ProgramOutput): 'rust' | 'antler' | 'unknown' => {
+  if (p.meta?.parser === 'rust' || p.meta?.parser === 'antler') return p.meta.parser
+  const msg = p.message ?? ''
+  if (msg.startsWith('[rust]')) return 'rust'
+  if (msg.startsWith('[antler]')) return 'antler'
+  return 'unknown'
+}
+
+const rustProblems = computed(() => problems.value.filter(p => {
+  const kind = detectParser(p)
+  return kind === 'rust' || kind === 'unknown'
+}))
+const antlerProblems = computed(() => problems.value.filter(p => detectParser(p) === 'antler'))
+
 const hasProblems = computed(() => problems.value.length > 0)
 
 const clearOutput = () => {
@@ -24,7 +39,7 @@ const clearOutput = () => {
     <div class="panel-header">
       <div class="tabs">
         <div class="tab active">
-          <span class="tab-icon">⚠️</span>
+          <span class="tab-icon"></span>
           <span>Ошибки</span>
         </div>
       </div>
@@ -35,32 +50,80 @@ const clearOutput = () => {
     
     <div class="panel-content">
       <div class="error-content">
-        <div v-if="hasProblems">
-          <div 
-            v-for="(p, idx) in problems" 
-            :key="idx"
-            class="problem-block error"
-          >
-            <div class="problem-icon">❌</div>
-            <div class="problem-body">
-              <div class="problem-title" :style="{ fontSize: (fontSize + 1) + 'px' }">
-                {{ p.message }}
-              </div>
-              <div v-if="p.line || p.column || p.file" class="problem-meta" :style="{ fontSize: (fontSize - 2) + 'px' }">
-                <div v-if="p.file" class="meta-row">
-                  <span class="meta-file">{{ p.file }}</span>
+        <div v-if="hasProblems" class="compare-grid">
+          <div class="compare-col">
+            <div class="compare-col-header" :style="{ fontSize: (fontSize) + 'px' }">
+              Мой парсер (Rust)
+            </div>
+
+            <div v-if="rustProblems.length">
+              <div
+                v-for="(p, idx) in rustProblems"
+                :key="`rust-${idx}`"
+                class="problem-block error"
+              >
+                <div class="problem-icon"></div>
+                <div class="problem-body">
+                  <div class="problem-title" :style="{ fontSize: (fontSize + 1) + 'px' }">
+                    {{ p.message }}
+                  </div>
+                  <div v-if="p.line || p.column || p.file" class="problem-meta" :style="{ fontSize: (fontSize - 2) + 'px' }">
+                    <div v-if="p.file" class="meta-row">
+                      <span class="meta-file">{{ p.file }}</span>
+                    </div>
+                    <div v-if="p.line || p.column" class="meta-row">
+                      <span v-if="p.line">line: {{ p.line }}</span>
+                      <span v-if="p.column">column: {{ p.column }}</span>
+                    </div>
+                  </div>
+                  <div class="problem-time" :style="{ fontSize: (fontSize - 3) + 'px' }">{{ new Date(p.timestamp).toLocaleTimeString() }}</div>
                 </div>
-                <div v-if="p.line || p.column" class="meta-row">
-                  <span v-if="p.line">line: {{ p.line }}</span>
-                  <span v-if="p.column">column: {{ p.column }}</span>
+              </div>
+            </div>
+            <div v-else class="no-errors" :style="{ fontSize: fontSize + 'px' }">
+              <span class="success-icon"></span>
+              <span>Ошибок нет</span>
+            </div>
+          </div>
+
+          <div class="compare-col">
+            <div class="compare-col-header" :style="{ fontSize: (fontSize) + 'px' }">
+              Antler (ANTLR)
+            </div>
+
+            <div v-if="antlerProblems.length">
+              <div
+                v-for="(p, idx) in antlerProblems"
+                :key="`antler-${idx}`"
+                class="problem-block error"
+              >
+                <div class="problem-icon"></div>
+                <div class="problem-body">
+                  <div class="problem-title" :style="{ fontSize: (fontSize + 1) + 'px' }">
+                    {{ p.message }}
+                  </div>
+                  <div v-if="p.line || p.column || p.file" class="problem-meta" :style="{ fontSize: (fontSize - 2) + 'px' }">
+                    <div v-if="p.file" class="meta-row">
+                      <span class="meta-file">{{ p.file }}</span>
+                    </div>
+                    <div v-if="p.line || p.column" class="meta-row">
+                      <span v-if="p.line">line: {{ p.line }}</span>
+                      <span v-if="p.column">column: {{ p.column }}</span>
+                    </div>
+                  </div>
+                  <div class="problem-time" :style="{ fontSize: (fontSize - 3) + 'px' }">{{ new Date(p.timestamp).toLocaleTimeString() }}</div>
                 </div>
               </div>
-              <div class="problem-time" :style="{ fontSize: (fontSize - 3) + 'px' }">{{ new Date(p.timestamp).toLocaleTimeString() }}</div>
+            </div>
+            <div v-else class="no-errors" :style="{ fontSize: fontSize + 'px' }">
+              <span class="success-icon"></span>
+              <span>Ошибок нет</span>
             </div>
           </div>
         </div>
+
         <div v-else class="no-errors" :style="{ fontSize: fontSize + 'px' }">
-          <span class="success-icon">✅</span>
+          <span class="success-icon"></span>
           <span>Ошибок нет</span>
         </div>
       </div>
@@ -153,6 +216,23 @@ const clearOutput = () => {
 
 .error-content {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.compare-grid {
+  display: flex;
+  gap: 16px;
+}
+
+.compare-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.compare-col-header {
+  color: var(--text-muted);
+  padding: 0 0 10px 2px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 12px;
 }
 
 .problem-block {
