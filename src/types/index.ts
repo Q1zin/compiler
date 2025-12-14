@@ -51,6 +51,7 @@ export interface ProgramOutput {
   meta?: {
     kind: string;
     tabId?: string;
+    parser?: 'rust' | 'antler';
   };
 }
 export interface OutputTab {

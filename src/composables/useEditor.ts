@@ -5,6 +5,7 @@ import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { invoke } from '@tauri-apps/api/core';
 import { getTaskTemplate, getBibliographyTemplate, getSourceCodeHeaderTemplate } from '../templates/textTemplates';
+import { validateWithAntler } from '../antler/validate';
 
 
 export function useEditor() {
@@ -234,32 +235,60 @@ export function useEditor() {
   };
 
   const validateFile = async (tab: FileTab) => {
-    try {
-      const res = await invoke<{ ok: boolean; messages: { kind: string; message: string; line: number; column: number }[] }>(
-        'validate_expression',
-        { input: tab.content }
-      );
+    const file = tab.path || tab.name;
 
-      const file = tab.path || tab.name;
-      if (res.messages.length) {
+    try {
+      // 1) Rust/Tauri validator
+      try {
+        const res = await invoke<{ ok: boolean; messages: { kind: string; message: string; line: number; column: number }[] }>(
+          'validate_expression',
+          { input: tab.content }
+        );
+
         for (const m of res.messages) {
           addOutput({
             type: 'error',
-            message: m.message,
+            message: `[rust] ${m.message}`,
             timestamp: new Date(),
             file,
             line: m.line,
             column: m.column,
+            meta: { kind: 'parser-error', parser: 'rust' },
           });
         }
+      } catch (e) {
+        addOutput({
+          type: 'error',
+          message: `[rust] Ошибка выполнения: ${e}`,
+          timestamp: new Date(),
+          file,
+          meta: { kind: 'parser-crash', parser: 'rust' },
+        });
       }
-    } catch (e) {
-      addOutput({
-        type: 'error',
-        message: `Ошибка выполнения: ${e}`,
-        timestamp: new Date(),
-        file: tab.path || tab.name,
-      });
+
+      // 2) Antler (antlr4ts) validator
+      try {
+        const antlerMessages = validateWithAntler(tab.content);
+        for (const m of antlerMessages) {
+          addOutput({
+            type: 'error',
+            message: `[antler] ${m.message}`,
+            timestamp: new Date(),
+            file,
+            line: m.line,
+            column: m.column,
+            meta: { kind: 'parser-error', parser: 'antler' },
+          });
+        }
+      } catch (e) {
+        addOutput({
+          type: 'error',
+          message: `[antler] Ошибка выполнения: ${e}`,
+          timestamp: new Date(),
+          file,
+          meta: { kind: 'parser-crash', parser: 'antler' },
+        });
+      }
     } finally {
       isRunning.value = false;
     }
