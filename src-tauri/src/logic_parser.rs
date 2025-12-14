@@ -542,6 +542,12 @@ impl<'a> Parser<'a> {
             TokenKind::True | TokenKind::False => {
                 self.advance();
             }
+            TokenKind::Newline => {
+                // Missing logical operand at end of line: report error at the newline,
+                // but keep the newline so the top-level parser can treat it as an
+                // expression separator (prevents cascading "junk" errors).
+                self.emit_error_token(&tok, "Ожидался логический операнд".to_string());
+            }
             TokenKind::LParen => {
                 self.advance();
                 self.consume_errors();
@@ -593,6 +599,13 @@ impl<'a> Parser<'a> {
             match self.current().kind.clone() {
                 TokenKind::Id(_) | TokenKind::Num(_) => {
                     self.parse_operand();
+                }
+                TokenKind::Newline => {
+                    // Missing operand at end of line: report error at the newline,
+                    // but keep the newline so the top-level parser can treat it
+                    // as an expression separator (prevents cascading "junk" errors).
+                    let here = self.current().clone();
+                    self.emit_error_token(&here, "Ожидался второй операнд сравнения".to_string());
                 }
                 TokenKind::And | TokenKind::Or => {
                     let next_op = match self.current().kind {
@@ -696,6 +709,44 @@ mod tests {
     }
 
     #[test]
+    fn missing_rhs_before_newline_does_not_cascade_into_next_line() {
+        let input = "X.GT.\nX.GT..TRUE.";
+        let res = validate_expression(input);
+        assert_eq!(res.messages.len(), 2, "messages: {:#?}", res.messages);
+        assert_eq!((res.messages[0].line, res.messages[0].column), (1, 6));
+        assert_eq!((res.messages[1].line, res.messages[1].column), (2, 6));
+        assert!(
+            res.messages[0].message.contains("Ожидался второй операнд сравнения"),
+            "unexpected message[0]: {:?}",
+            res.messages[0].message
+        );
+        assert!(
+            res.messages[1].message.contains("Ожидался второй операнд сравнения"),
+            "unexpected message[1]: {:?}",
+            res.messages[1].message
+        );
+    }
+
+    #[test]
+    fn missing_logical_operand_before_newline_does_not_cascade_into_next_line() {
+        let input = ".TRUE..AND.\n.TRUE..OR.\n";
+        let res = validate_expression(input);
+        assert_eq!(res.messages.len(), 2, "messages: {:#?}", res.messages);
+        assert_eq!((res.messages[0].line, res.messages[0].column), (1, 12));
+        assert_eq!((res.messages[1].line, res.messages[1].column), (2, 11));
+        assert!(
+            res.messages[0].message.contains("Ожидался логический операнд"),
+            "unexpected message[0]: {:?}",
+            res.messages[0].message
+        );
+        assert!(
+            res.messages[1].message.contains("Ожидался логический операнд"),
+            "unexpected message[1]: {:?}",
+            res.messages[1].message
+        );
+    }
+
+    #[test]
     fn valid_chains_should_have_no_errors() {
         let cases = [
             ".TRUE.",
@@ -724,5 +775,46 @@ mod tests {
                 res.messages
             );
         }
+    }
+
+    #[test]
+    fn one_error_chains_should_have_exactly_one_error() {
+        let cases: [&str; 20] = [
+            "X",
+            "X.GT.",
+            "X.GT..TRUE.",
+            "Y.LT.",
+            "Y.LT..TRUE.",
+            ".TRUE",
+            ".FALSE",
+            ".TRUE..AND..FALSE",
+            ".TRUE..OR..FALSE",
+            ".TRUE..AND.",
+            ".TRUE..OR.",
+            "X.GT.0.OR.Y",
+            "X.GT.0)",
+            "X.GT.0.AND.",
+            "X.GT.0.AND.X",
+            "(X.GT.0",
+            ".TRUE.\n.FALSE",
+            ".TRUE.\nX",
+            "\nX",
+            "X.GT.0\nY",
+        ];
+
+        let mut failures: Vec<(&str, Vec<_>)> = Vec::new();
+
+        for input in cases {
+            let res = validate_expression(input);
+            if res.messages.len() != 1 {
+                failures.push((input, res.messages));
+            }
+        }
+
+        assert!(
+            failures.is_empty(),
+            "expected exactly 1 error for every case, failures: {:#?}",
+            failures
+        );
     }
 }
