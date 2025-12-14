@@ -24,7 +24,6 @@ export function useEditor() {
 
   const output = ref<ProgramOutput[]>([]);
   const isRunning = ref(false);
-  const outputActiveTab = ref<'output' | 'errors'>('output');
 
   const activeTab = computed(() => 
     tabs.value.find(tab => tab.id === activeTabId.value) || null
@@ -50,7 +49,7 @@ export function useEditor() {
       id: tabId,
       name: name || `Untitled-${tabs.value.length + 1}`,
       path: path || '',
-      content: content ?? '// Новый файл\nconsole.log("Hello, World!");',
+      content: content ?? 'X.GT.0.OR.Y.LT.5',
       isModified: !path,
       isActive: false,
       created: new Date(),
@@ -120,10 +119,6 @@ export function useEditor() {
   };
 
   const closeAllTabs = () => {
-    if (hasUnsavedChanges.value) {
-      console.log('Предупреждение: есть несохранённые изменения');
-    }
-
     tabs.value = [];
     activeTabId.value = null;
   };
@@ -131,12 +126,6 @@ export function useEditor() {
   const closeOtherTabs = (keepTabId: string) => {
     const keepTab = tabs.value.find(tab => tab.id === keepTabId);
     if (!keepTab) return;
-
-    const hasUnsavedInOthers = tabs.value.some(tab => tab.id !== keepTabId && tab.isModified);
-
-    if (hasUnsavedInOthers) {
-      console.log('Предупреждение: есть несохранённые изменения в других файлах');
-    }
 
     tabs.value = [keepTab];
     setActiveTab(keepTabId);
@@ -198,7 +187,7 @@ export function useEditor() {
     if (!tab) return;
 
     try {
-      const suggestedName = tab.name || 'Untitled.js';
+      const suggestedName = tab.name || 'Untitled.gg';
       const newPath = await saveDialog({
         title: 'Сохранить файл как',
         defaultPath: suggestedName,
@@ -241,103 +230,10 @@ export function useEditor() {
     isRunning.value = true;
     clearOutput();
 
-    addOutput({
-      type: 'output',
-      message: `Запуск программы "${tab.name}"...`,
-      timestamp: new Date(),
-    });
-
-    // .gg files: validate syntax via Rust parser (no evaluation)
-    if (tab.name.toLowerCase().endsWith('.gg')) {
-      await validateGgFile(tab);
-      return;
-    }
-
-    try {
-      setTimeout(() => {
-        try {
-          let capturedOutput = '';
-          const mockConsole = {
-            log: (...args: any[]) => {
-              capturedOutput += args.join(' ') + '\n';
-            },
-          };
-
-          const code = tab.content.replace(/console\.log/g, 'mockConsole.log');
-          const func = new Function('mockConsole', code);
-          func(mockConsole);
-
-          if (capturedOutput) {
-            addOutput({
-              type: 'output',
-              message: capturedOutput.trim(),
-              timestamp: new Date(),
-            });
-          }
-        } catch (execError) {
-          let line: number | undefined
-          let column: number | undefined
-          const stack = (execError as any)?.stack as string | undefined
-          if (stack) {
-            const re = /:(\d+):(\d+)/
-            const m = re.exec(stack)
-            if (m) {
-              line = Number(m[1])
-              column = Number(m[2])
-            }
-          }
-          addOutput({
-            type: 'error',
-            message: `Ошибка выполнения: ${execError}`,
-            timestamp: new Date(),
-            file: tab.path || tab.name,
-            line,
-            column,
-          });
-        }
-
-        const hasProblem = output.value.some((o) => o.type === 'error' || o.type === 'warning');
-        if (!hasProblem) {
-          addOutput({
-            type: 'success',
-            message: 'Компиляция и выполнение завершены успешно. Ошибок не найдено.',
-            timestamp: new Date(),
-          });
-        } else {
-          addOutput({
-            type: 'output',
-            message: 'Программа завершена',
-            timestamp: new Date()
-          });
-        }
-        
-        isRunning.value = false;
-      }, 500);
-      
-    } catch (error) {
-      let line: number | undefined
-      let column: number | undefined
-      const stack = (error as any)?.stack as string | undefined
-      if (stack) {
-        const re = /:(\d+):(\d+)/
-        const m = re.exec(stack)
-        if (m) {
-          line = Number(m[1])
-          column = Number(m[2])
-        }
-      }
-      addOutput({
-        type: 'error',
-        message: `Ошибка выполнения: ${error}`,
-        timestamp: new Date(),
-        line,
-        column,
-      });
-      isRunning.value = false;
-    }
+    await validateFile(tab);
   };
 
-  const validateGgFile = async (tab: FileTab) => {
+  const validateFile = async (tab: FileTab) => {
     try {
       const res = await invoke<{ ok: boolean; messages: { kind: string; message: string; line: number; column: number }[] }>(
         'validate_expression',
@@ -356,17 +252,6 @@ export function useEditor() {
             column: m.column,
           });
         }
-        addOutput({
-          type: 'output',
-          message: 'Проверка завершена: найдены ошибки',
-          timestamp: new Date(),
-        });
-      } else {
-        addOutput({
-          type: 'success',
-          message: 'Цепочка корректна. Ошибок не найдено.',
-          timestamp: new Date(),
-        });
       }
     } catch (e) {
       addOutput({
@@ -382,23 +267,14 @@ export function useEditor() {
 
   const addOutput = (outputItem: ProgramOutput) => {
     output.value.push(outputItem);
-    if (outputItem.type === 'error' || outputItem.type === 'warning') {
-      outputActiveTab.value = 'errors';
-    } else if (outputItem.type === 'success') {
-      outputActiveTab.value = 'output';
-    } else if (outputItem.type === 'output') {
-      if (outputActiveTab.value !== 'errors') {
-        outputActiveTab.value = 'output';
-      }
-    }
   };
 
   const clearOutput = () => {
     output.value = [];
   };
 
-  const clearOutputOnly = () => {
-    output.value = output.value.filter((item) => item.type !== 'output');
+  const clearErrors = () => {
+    output.value = [];
   };
 
   const changeCodeFontSize = (delta: number) => {
@@ -491,7 +367,6 @@ export function useEditor() {
     settings,
     output,
     isRunning,
-    outputActiveTab,
     createNewTab,
     setActiveTab,
     closeTab,
@@ -503,7 +378,7 @@ export function useEditor() {
     runCode,
     addOutput,
     clearOutput,
-    clearOutputOnly,
+    clearErrors,
     changeCodeFontSize,
     changeOutputFontSize,
     toggleWordWrap,

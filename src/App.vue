@@ -16,7 +16,6 @@ const {
   settings,
   output,
   isRunning,
-  outputActiveTab,
   createNewTab,
   setActiveTab,
   closeTab,
@@ -34,11 +33,10 @@ const {
   openFileFromDisk,
   openActiveFileExternally,
   revealActiveFileInFolder,
-  clearOutputOnly,
+  clearErrors,
 } = useEditor()
 
 const handleFileAction = async (action: string) => {
-  console.log('File action:', action)
   
   switch (action) {
     case 'new':
@@ -76,7 +74,6 @@ const handleFileAction = async (action: string) => {
 }
 
 const handleTextAction = (action: string) => {
-  console.log('Text action:', action)
   
   switch (action) {
     case 'task':
@@ -136,8 +133,8 @@ const activeFileName = computed(() =>
 
 const outputItems = computed(() => output.value)
 
-const handleOutputTabChange = (tabId: string) => {
-  outputActiveTab.value = tabId as 'output' | 'errors'
+const handleClearErrors = () => {
+  clearErrors()
 }
 
 const showTextModal = ref(false)
@@ -214,10 +211,8 @@ const handleToggleTheme = () => {
       <OutputPanel 
         :items="outputItems"
         :font-size="settings.outputFontSize ?? settings.fontSize"
-        :active-tab="outputActiveTab"
         class="output-section"
-        @clear-output="clearOutputOnly()"
-        @tab-change="handleOutputTabChange"
+        @clear-output="handleClearErrors()"
       />
   
       <TextModal

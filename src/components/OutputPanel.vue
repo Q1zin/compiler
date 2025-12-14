@@ -1,60 +1,21 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed } from 'vue'
 import type { ProgramOutput } from '../types'
 
 const props = defineProps<{
   items?: ProgramOutput[]
-  output?: string
-  errors?: string
   fontSize: number
-  activeTab?: 'output' | 'errors'
 }>()
 
 const emit = defineEmits<{
   'clear-output': []
-  'tab-change': [tabId: string]
 }>()
 
-const currentTab = ref<'output' | 'errors'>(props.activeTab ?? 'output')
-
-watch(
-  () => props.activeTab,
-  (val) => {
-    if (val && val !== currentTab.value) currentTab.value = val
-  }
-)
-
-const tabs = [
-  { id: 'output', name: 'Вывод', icon: '📄' },
-  { id: 'errors', name: 'Ошибки', icon: '⚠️' },
-]
-
-const outputLines = computed(() => {
-  if (props.items && props.items.length) {
-    const lines = props.items.filter(i => i.type === 'output').map(i => i.message)
-    if (lines.length === 0) return []
-    return lines.join('\n').split('\n')
-  }
-  if (props.output === undefined || props.output === null) {
-    return ['Программа ещё не запускалась...']
-  }
-  if (props.output === '') {
-    return []
-  }
-  return props.output.split('\n')
-})
-
-const problems = computed(() => (props.items ?? []).filter(i => i.type === 'error' || i.type === 'warning'))
+const problems = computed(() => (props.items ?? []).filter(i => i.type === 'error'))
 const hasProblems = computed(() => problems.value.length > 0)
-const hasSuccess = computed(() => (props.items ?? []).some(i => i.type === 'success'))
 
 const clearOutput = () => {
   emit('clear-output')
-}
-
-const selectTab = (tabId: 'output' | 'errors') => {
-  currentTab.value = tabId
-  emit('tab-change', tabId)
 }
 </script>
 
@@ -62,47 +23,25 @@ const selectTab = (tabId: 'output' | 'errors') => {
   <div class="output-panel">
     <div class="panel-header">
       <div class="tabs">
-        <button 
-          v-for="tab in tabs" 
-          :key="tab.id"
-          class="tab"
-          :class="{ active: currentTab === tab.id }"
-          @click="selectTab(tab.id as 'output' | 'errors')"
-        >
-          <span class="tab-icon">{{ tab.icon }}</span>
-          <span>{{ tab.name }}</span>
-        </button>
+        <div class="tab active">
+          <span class="tab-icon">⚠️</span>
+          <span>Ошибки</span>
+        </div>
       </div>
       <div style="margin-left:auto; padding-right:8px;">
-        <button v-if="currentTab === 'output'" class="action-btn" @click="clearOutput">Очистить</button>
+        <button class="action-btn" @click="clearOutput">Очистить</button>
       </div>
     </div>
     
     <div class="panel-content">
-      <div v-if="currentTab === 'output'" class="output-content">
-        <div 
-          v-for="(line, index) in outputLines" 
-          :key="index"
-          class="output-line"
-          :style="{ fontSize: fontSize + 'px' }"
-        >
-          {{ line }}
-        </div>
-      </div>
-      <div v-else-if="currentTab === 'errors'" class="error-content">
-        <div v-if="!hasProblems && hasSuccess" class="success-banner">
-          <span class="success-icon">✅</span>
-          <div class="success-text" :style="{ fontSize: fontSize + 'px' }">
-            Компиляция завершена успешно. Ошибок не найдено.
-          </div>
-        </div>
-        <div v-else>
+      <div class="error-content">
+        <div v-if="hasProblems">
           <div 
             v-for="(p, idx) in problems" 
             :key="idx"
-            :class="['problem-block', p.type]"
+            class="problem-block error"
           >
-            <div class="problem-icon">{{ p.type === 'error' ? '❌' : '⚠️' }}</div>
+            <div class="problem-icon">❌</div>
             <div class="problem-body">
               <div class="problem-title" :style="{ fontSize: (fontSize + 1) + 'px' }">
                 {{ p.message }}
@@ -119,10 +58,10 @@ const selectTab = (tabId: 'output' | 'errors') => {
               <div class="problem-time" :style="{ fontSize: (fontSize - 3) + 'px' }">{{ new Date(p.timestamp).toLocaleTimeString() }}</div>
             </div>
           </div>
-          <div v-if="!problems.length" class="no-errors" :style="{ fontSize: fontSize + 'px' }">
-            <span class="success-icon">✅</span>
-            <span>Ошибок и предупреждений нет</span>
-          </div>
+        </div>
+        <div v-else class="no-errors" :style="{ fontSize: fontSize + 'px' }">
+          <span class="success-icon">✅</span>
+          <span>Ошибок нет</span>
         </div>
       </div>
     </div>

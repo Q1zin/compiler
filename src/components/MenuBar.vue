@@ -109,7 +109,7 @@ const handleToggleTheme = () => {
             </div>
           </div>
           <div class="dropdown-item font-controls">
-            <span>Окно вывода</span>
+            <span>Окно ошибок</span>
             <div class="font-buttons">
               <button @click="handleFontChange('output', -1)" class="font-btn">A-</button>
               <button @click="handleFontChange('output', 1)" class="font-btn">A+</button>
