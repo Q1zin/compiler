@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import MenuBar from './components/MenuBar.vue'
 import TabManager from './components/TabManager.vue'
 import CodeEditor from './components/CodeEditor.vue'
@@ -155,6 +155,80 @@ const insertTextFromModal = () => {
 const handleToggleTheme = () => {
   settings.theme = settings.theme === 'dark' ? 'light' : 'dark'
 }
+
+const editorContainerEl = ref<HTMLElement | null>(null)
+const outputWidthPx = ref<number | null>(null)
+let isResizing = false
+let resizeStartX = 0
+let resizeStartWidth = 0
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
+
+const ensureDefaultOutputWidth = () => {
+  if (!editorContainerEl.value) return
+  if (outputWidthPx.value !== null) return
+  const w = editorContainerEl.value.getBoundingClientRect().width
+  outputWidthPx.value = Math.round(w * 0.7)
+}
+
+const startResize = (e: MouseEvent) => {
+  if (!editorContainerEl.value) return
+  ensureDefaultOutputWidth()
+  if (outputWidthPx.value === null) return
+
+  isResizing = true
+  resizeStartX = e.clientX
+  resizeStartWidth = outputWidthPx.value
+
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+
+  e.preventDefault()
+}
+
+const onResizeMove = (e: MouseEvent) => {
+  if (!isResizing) return
+  if (!editorContainerEl.value) return
+  if (outputWidthPx.value === null) return
+
+  const containerWidth = editorContainerEl.value.getBoundingClientRect().width
+  const minWidth = Math.max(240, Math.round(containerWidth * 0.25))
+  const maxWidth = Math.max(minWidth, Math.round(containerWidth * 0.8))
+
+  const dx = e.clientX - resizeStartX
+  const nextWidth = resizeStartWidth - dx
+  outputWidthPx.value = clamp(Math.round(nextWidth), minWidth, maxWidth)
+}
+
+const stopResize = () => {
+  if (!isResizing) return
+  isResizing = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+onMounted(() => {
+  window.addEventListener('mousemove', onResizeMove)
+  window.addEventListener('mouseup', stopResize)
+  window.addEventListener('blur', stopResize)
+  if (activeTab.value) ensureDefaultOutputWidth()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('mousemove', onResizeMove)
+  window.removeEventListener('mouseup', stopResize)
+  window.removeEventListener('blur', stopResize)
+})
+
+watch(
+  () => activeTab.value,
+  tab => {
+    if (tab) {
+      ensureDefaultOutputWidth()
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -175,7 +249,7 @@ const handleToggleTheme = () => {
       @tab-new="handleTabNew"
     />
     
-    <div class="editor-container">
+    <div ref="editorContainerEl" class="editor-container">
       <div class="code-section">
         <div class="editor-header">
           <span class="file-name">{{ activeFileName }}</span>
@@ -208,13 +282,19 @@ const handleToggleTheme = () => {
         </div>
       </div>
       
-      <OutputPanel 
+      <div
         v-if="activeTab"
-        :items="outputItems"
-        :font-size="settings.outputFontSize ?? settings.fontSize"
-        class="output-section"
-        @clear-output="handleClearErrors()"
-      />
+        class="output-wrapper"
+        :style="outputWidthPx !== null ? { width: `${outputWidthPx}px` } : undefined"
+      >
+        <div class="resize-handle" @mousedown="startResize" />
+        <OutputPanel
+          :items="outputItems"
+          :font-size="settings.outputFontSize ?? settings.fontSize"
+          class="output-section"
+          @clear-output="handleClearErrors()"
+        />
+      </div>
   
       <TextModal
         :show="showTextModal"
@@ -248,6 +328,22 @@ const handleToggleTheme = () => {
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
+}
+
+.output-wrapper {
+  flex: 0 0 auto;
+  position: relative;
+  display: flex;
+  height: 100%;
+}
+
+.resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
 }
 
 .editor-header {
@@ -352,10 +448,8 @@ const handleToggleTheme = () => {
 }
 
 .output-section {
-  flex: 0 0 70%;
-  width: 70%;
-  min-width: 40%;
-  max-width: 70%;
+  flex: 1;
+  width: 100%;
 }
 
 * {

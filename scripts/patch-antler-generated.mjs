@@ -15,6 +15,8 @@ const parserOnlyRemovableImportLines = [
   'import { ParseTreeVisitor } from "antlr4ts/tree/ParseTreeVisitor";',
 ];
 
+const tokenImportLine = 'import { Token } from "antlr4ts/Token";';
+
 function patch(content, fileName) {
   let out = content;
   for (const line of removableImportLines) {
@@ -26,6 +28,17 @@ function patch(content, fileName) {
       out = out.replace(new RegExp(`^${line.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\r?\\n`, 'm'), '');
     }
   }
+
+  if (!out.includes(tokenImportLine) && /\bToken\s*\./.test(out)) {
+    if (/^import .*\r?\n\r?\n/m.test(out)) {
+      out = out.replace(/^import .*\r?\n\r?\n/m, m => `${m}${tokenImportLine}\n`);
+    } else {
+      out = `${tokenImportLine}\n${out}`;
+    }
+  }
+
+  out = out.replace(/^\s*\/\/.*\r?\n/gm, '');
+  out = out.replace(/\/\*[\s\S]*?\*\//g, '');
 
   out = out.replace(/\n{3,}/g, '\n\n');
   return out;
