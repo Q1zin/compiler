@@ -817,4 +817,44 @@ mod tests {
             failures
         );
     }
+
+    #[test]
+    fn two_error_inputs_should_have_exactly_two_errors() {
+        // Each case is a *single* expression (single line) that must produce exactly 2 errors.
+        // We mainly combine:
+        // - missing second operand before a logical operator (.AND./.OR.)
+        // - extra dot before an identifier on the RHS (e.g. ".AND..Y" -> ".AND." + ".Y")
+        let cases: [&str; 15] = [
+            "X.GT..AND..Y.LT.5",
+            "X.GT..AND..Y.GT.5",
+            "X.LT..AND..Y.LT.5",
+            "X.LT..AND..Y.GT.5",
+            "A1.GT..AND..B2.LT.3",
+            "A1.LT..AND..B2.GT.3",
+            "ABC.GT..AND..DEF.LT.10",
+            "ABC.LT..AND..DEF.GT.10",
+            "X.GT..OR..Y.LT.5",
+            "X.GT..OR..Y.GT.5",
+            "X.LT..OR..Y.LT.5",
+            "X.LT..OR..Y.GT.5",
+            "A1.GT..OR..B2.LT.3",
+            "A1.LT..OR..B2.GT.3",
+            "ABC.GT..OR..DEF.LT.10",
+        ];
+
+        let mut failures: Vec<(&str, Vec<_>)> = Vec::new();
+
+        for input in cases {
+            let res = validate_expression(input);
+            if res.messages.len() != 2 {
+                failures.push((input, res.messages));
+            }
+        }
+
+        assert!(
+            failures.is_empty(),
+            "expected exactly 2 errors for every case, failures: {:#?}",
+            failures
+        );
+    }
 }
