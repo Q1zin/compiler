@@ -13,10 +13,10 @@ logicalTerm
     ;
 
 logicalOperand
-    : TRUE_CONST                                    # TrueConst
-    | FALSE_CONST                                   # FalseConst
-    | comparison                                    # ComparisonExpr
-    | LPAREN logicalExpression RPAREN               # ParenExpr
+    : TRUE_CONST
+    | FALSE_CONST
+    | comparison
+    | LPAREN logicalExpression RPAREN
     ;
 
 comparison
@@ -24,13 +24,13 @@ comparison
     ;
 
 comparisonOp
-    : GT_OP     # GreaterThan
-    | LT_OP     # LessThan
+    : GT_OP
+    | LT_OP
     ;
 
 operand
-    : identifier    # IdentifierOperand
-    | number        # NumberOperand
+    : identifier
+    | number
     ;
 
 identifier

@@ -167,7 +167,6 @@ export function useEditor() {
       const tab = tabs.value.find(t => t.id === tabIdAtSchedule);
       if (!tab) return;
 
-      // Avoid concurrent runs; if still running, try again shortly.
       if (isRunning.value) {
         scheduleValidateActiveTab();
         return;
@@ -269,7 +268,6 @@ export function useEditor() {
     const file = tab.path || tab.name;
 
     try {
-      // 1) Rust/Tauri validator
       try {
         const res = await invoke<{ ok: boolean; messages: { kind: string; message: string; line: number; column: number }[] }>(
           'validate_expression',
@@ -297,7 +295,6 @@ export function useEditor() {
         });
       }
 
-      // 2) Antler (antlr4ts) validator
       try {
         const antlerMessages = validateWithAntler(tab.content);
         for (const m of antlerMessages) {

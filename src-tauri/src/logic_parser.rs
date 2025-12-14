@@ -2,8 +2,8 @@ use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
-    pub start: usize, // byte index
-    pub end: usize,   // byte index
+    pub start: usize,
+    pub end: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,7 +40,7 @@ pub struct Token {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ValidationMessage {
-    pub kind: String, // "error" | "warning" (we only emit errors for now)
+    pub kind: String,
     pub message: String,
     pub line: usize,
     pub column: usize,
@@ -53,7 +53,6 @@ pub struct ValidationResult {
 }
 
 fn line_col(input: &str, byte_index: usize) -> (usize, usize) {
-    // 1-based line/column
     let mut line = 1usize;
     let mut col = 1usize;
 
@@ -95,7 +94,6 @@ fn lex(input: &str) -> Vec<Token> {
     while i < bytes.len() {
         let ch = input[i..].chars().next().unwrap();
 
-        // Newline is a terminal separator: emit token (do not skip)
         if ch == '\n' {
             let start = i;
             i += 1;
@@ -113,7 +111,6 @@ fn lex(input: &str) -> Vec<Token> {
             continue;
         }
 
-        // Skip other whitespace
         if ch.is_whitespace() {
             i += ch.len_utf8();
             continue;
@@ -131,7 +128,6 @@ fn lex(input: &str) -> Vec<Token> {
                 push(&mut tokens, TokenKind::RParen, start, i);
             }
             '.' => {
-                // Try known dotted keyword .XXX.
                 let rest = &input[start..];
                 let kw = [
                     (".TRUE.", TokenKind::True),
@@ -155,8 +151,6 @@ fn lex(input: &str) -> Vec<Token> {
                     continue;
                 }
 
-                // Unknown dotted word like .FASE.
-                // Pattern: '.' IDENT '.'
                 let mut j = start + 1;
                 if j < bytes.len() {
                     let next_ch = input[j..].chars().next().unwrap();
@@ -171,9 +165,6 @@ fn lex(input: &str) -> Vec<Token> {
                             }
                         }
 
-                        // Recovery for incomplete dotted keywords like ".FALSE" (missing trailing '.')
-                        // We emit a single lexer error and also insert the intended keyword token
-                        // so the parser can continue without cascading.
                         let word_upper = input[(start + 1)..j].to_string();
                         let suggested = match word_upper.as_str() {
                             "TRUE" => Some((".TRUE.", TokenKind::True)),
@@ -197,18 +188,12 @@ fn lex(input: &str) -> Vec<Token> {
                                     start,
                                     i,
                                 );
-                                // Insert recovered token
                                 push(&mut tokens, kind, start, i);
                                 continue;
                             }
                         }
 
                         if j < bytes.len() && input[j..].starts_with('.') {
-                            // Special recovery:
-                            // If the trailing '.' actually starts a known dotted operator/keyword
-                            // (e.g. input is "..Y.LT.5" -> we are at the extra '.' before Y),
-                            // we must NOT consume ".Y." as UnknownDottedWord because that would
-                            // swallow the operator's leading dot and cascade errors.
                             let rest_from_trailing_dot = &input[j..];
                             let trailing_dot_starts_known = [
                                 ".TRUE.",
@@ -244,7 +229,6 @@ fn lex(input: &str) -> Vec<Token> {
                             continue;
                         }
 
-                        // ".Y" style: extra dot before identifier
                         i += 1;
                         push(
                             &mut tokens,
@@ -256,7 +240,6 @@ fn lex(input: &str) -> Vec<Token> {
                     }
                 }
 
-                // Lone dot or dot before something else
                 i += 1;
                 push(
                     &mut tokens,
@@ -277,7 +260,6 @@ fn lex(input: &str) -> Vec<Token> {
                 }
                 let word = input[start..j].to_string();
 
-                // Bare keywords that must be dotted
                 let upper = word.as_str();
                 let dotted = match upper {
                     "TRUE" => Some(".TRUE."),
@@ -388,7 +370,6 @@ impl<'a> Parser<'a> {
     }
 
     fn consume_errors(&mut self) {
-        // Convert lexer error tokens into messages and skip them.
         loop {
             let tok = self.current().clone();
             match &tok.kind {
@@ -456,18 +437,15 @@ impl<'a> Parser<'a> {
     fn parse(&mut self) {
         self.consume_errors();
 
-        // allow leading blank lines
         while matches!(self.current().kind, TokenKind::Newline) {
             self.advance();
             self.consume_errors();
         }
 
-        // Parse multiple expressions separated by newlines
         while !self.at_eof() {
             self.parse_lv();
             self.consume_errors();
 
-            // Consume one or more newlines (expression separator)
             if matches!(self.current().kind, TokenKind::Newline) {
                 while matches!(self.current().kind, TokenKind::Newline) {
                     self.advance();
@@ -480,7 +458,6 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            // If there's junk on the same line, consume until newline/eof
             while !self.at_eof() && !matches!(self.current().kind, TokenKind::Newline) {
                 let tok = self.current().clone();
                 match tok.kind {
@@ -496,7 +473,6 @@ impl<'a> Parser<'a> {
                 self.consume_errors();
             }
 
-            // optional newline(s) after junk
             while matches!(self.current().kind, TokenKind::Newline) {
                 self.advance();
                 self.consume_errors();
@@ -504,7 +480,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // ⟨ЛВ⟩ → ⟨ЛТ⟩ ( .OR. ⟨ЛТ⟩ )*
     fn parse_lv(&mut self) {
         self.parse_lt();
         loop {
@@ -519,7 +494,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // ⟨ЛТ⟩ → ⟨ЛО⟩ ( .AND. ⟨ЛО⟩ )*
     fn parse_lt(&mut self) {
         self.parse_lo();
         loop {
@@ -534,7 +508,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // ⟨ЛО⟩ → .TRUE. | .FALSE. | ⟨СВ⟩ | (⟨ЛВ⟩)
     fn parse_lo(&mut self) {
         self.consume_errors();
         let tok = self.current().clone();
@@ -543,9 +516,6 @@ impl<'a> Parser<'a> {
                 self.advance();
             }
             TokenKind::Newline => {
-                // Missing logical operand at end of line: report error at the newline,
-                // but keep the newline so the top-level parser can treat it as an
-                // expression separator (prevents cascading "junk" errors).
                 self.emit_error_token(&tok, "Ожидался логический операнд".to_string());
             }
             TokenKind::LParen => {
@@ -556,7 +526,6 @@ impl<'a> Parser<'a> {
                 if matches!(self.current().kind, TokenKind::RParen) {
                     self.advance();
                 } else {
-                    // missing closing paren
                     self.emit_error_at(tok.span.start, "Отсутствует закрывающая скобка".to_string());
                 }
             }
@@ -564,7 +533,6 @@ impl<'a> Parser<'a> {
                 self.parse_sv();
             }
             TokenKind::RParen => {
-                // likely extra ')'
                 self.emit_error_token(&tok, "Лишняя закрывающая скобка".to_string());
                 self.advance();
             }
@@ -578,7 +546,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // ⟨СВ⟩ → ⟨Операнд⟩ ( .GT. ⟨Операнд⟩ | .LT. ⟨Операнд⟩ )
     fn parse_sv(&mut self) {
         self.consume_errors();
         self.parse_operand();
@@ -595,15 +562,11 @@ impl<'a> Parser<'a> {
             self.advance();
             self.consume_errors();
 
-            // second operand
             match self.current().kind.clone() {
                 TokenKind::Id(_) | TokenKind::Num(_) => {
                     self.parse_operand();
                 }
                 TokenKind::Newline => {
-                    // Missing operand at end of line: report error at the newline,
-                    // but keep the newline so the top-level parser can treat it
-                    // as an expression separator (prevents cascading "junk" errors).
                     let here = self.current().clone();
                     self.emit_error_token(&here, "Ожидался второй операнд сравнения".to_string());
                 }
@@ -618,7 +581,6 @@ impl<'a> Parser<'a> {
                         &here,
                         format!("Между {} и {} нет второго операнда", match op_tok.kind { TokenKind::Gt => ".GT.", TokenKind::Lt => ".LT.", _ => "" }, next_op),
                     );
-                    // do not consume AND/OR here; higher level will handle it
                 }
                 TokenKind::RParen | TokenKind::Eof => {
                     let here = self.current().clone();
@@ -634,7 +596,6 @@ impl<'a> Parser<'a> {
                 }
             }
         } else {
-            // If it starts like a comparison but no .GT./.LT. follows
             self.emit_error_token(
                 &op_tok,
                 "Ожидалось сравнение с .GT. или .LT.".to_string(),
@@ -642,7 +603,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // ⟨Операнд⟩ → id | num
     fn parse_operand(&mut self) {
         self.consume_errors();
         let tok = self.current().clone();
@@ -820,10 +780,6 @@ mod tests {
 
     #[test]
     fn two_error_inputs_should_have_exactly_two_errors() {
-        // Each case is a *single* expression (single line) that must produce exactly 2 errors.
-        // We mainly combine:
-        // - missing second operand before a logical operator (.AND./.OR.)
-        // - extra dot before an identifier on the RHS (e.g. ".AND..Y" -> ".AND." + ".Y")
         let cases: [&str; 15] = [
             "X.GT..AND..Y.LT.5",
             "X.GT..AND..Y.GT.5",
@@ -860,9 +816,6 @@ mod tests {
 
     #[test]
     fn three_error_inputs_should_have_exactly_three_errors() {
-        // Each case is a *single* expression (single line) that must produce exactly 3 errors.
-        // Stable pattern: (1) missing second operand for comparison before .AND./.OR.,
-        // (2) extra dot before identifier on the RHS (..Y...), (3) extra closing paren at end.
         let cases: [&str; 10] = [
             "X.GT..AND..Y.LT.5)",
             "X.GT..OR..Y.LT.5)",

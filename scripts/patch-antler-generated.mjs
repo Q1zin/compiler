@@ -18,7 +18,6 @@ const parserOnlyRemovableImportLines = [
 function patch(content, fileName) {
   let out = content;
   for (const line of removableImportLines) {
-    // Remove the entire line + trailing newline.
     out = out.replace(new RegExp(`^${line.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\r?\\n`, 'm'), '');
   }
 
@@ -28,7 +27,6 @@ function patch(content, fileName) {
     }
   }
 
-  // Collapse accidental extra blank lines at the import boundary.
   out = out.replace(/\n{3,}/g, '\n\n');
   return out;
 }
@@ -45,8 +43,4 @@ for (const name of tsFiles) {
     await fs.writeFile(filePath, after, 'utf8');
     changedCount += 1;
   }
-}
-
-if (changedCount === 0) {
-  // no-op
 }
