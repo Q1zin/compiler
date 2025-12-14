@@ -3,6 +3,7 @@ import type { FileTab, EditorSettings, ProgramOutput } from '../types';
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
+import { invoke } from '@tauri-apps/api/core';
 import { getTaskTemplate, getBibliographyTemplate, getSourceCodeHeaderTemplate } from '../templates/textTemplates';
 
 
@@ -246,78 +247,9 @@ export function useEditor() {
       timestamp: new Date(),
     });
 
-    switch (tab.name) {
-      case "d_1.gg":
-        addOutput({
-          type: 'output',
-          message: ".FALSE.",
-          timestamp: new Date(),
-        });
-        break;
-      case "d_2.gg":
-        addOutput({
-          type: 'output',
-          message: "unknown",
-          timestamp: new Date(),
-        });
-        break;
-      case "d_3.gg":
-        addOutput({
-          type: 'output',
-          message: ".TRUE.",
-          timestamp: new Date(),
-        });
-        break;
-      case "d_4.gg":
-        addOutput({
-          type: 'error',
-          message: "Ошибка выполнения: Необходимо писать .AND., а не AND",
-          timestamp: new Date(),
-          file: tab.path || tab.name,
-          line: 1,
-          column: 7,
-        });
-        addOutput({
-          type: 'error',
-          message: "Ошибка выполнения: Неизвестный операнд .FASE.",
-          timestamp: new Date(),
-          file: tab.path || tab.name,
-          line: 1,
-          column: 11,
-        });
-        break;
-      case "d_5.gg":
-        addOutput({
-          type: 'error',
-          message: "Ошибка выполнения: Между .GT. и .AND. нет второго операнда",
-          timestamp: new Date(),
-          file: tab.path || tab.name,
-          line: 1,
-          column: 6,
-        });
-        addOutput({
-          type: 'error',
-          message: "Ошибка выполнения: Лишняя точка перед переменной",
-          timestamp: new Date(),
-          file: tab.path || tab.name,
-          line: 1,
-          column: 11,
-        });
-        break;
-      case "d_6.gg":
-        addOutput({
-            type: 'error',
-            message: `Ошибка выполнения: Лишняя закрывающая скобка`,
-            timestamp: new Date(),
-            file: tab.path || tab.name,
-            line: 1,
-            column: 12,
-          });
-        break;
-    }
-
-    if (tab.name.startsWith('d_')) {
-      isRunning.value = false;
+    // .gg files: validate syntax via Rust parser (no evaluation)
+    if (tab.name.toLowerCase().endsWith('.gg')) {
+      await validateGgFile(tab);
       return;
     }
 
@@ -401,6 +333,49 @@ export function useEditor() {
         line,
         column,
       });
+      isRunning.value = false;
+    }
+  };
+
+  const validateGgFile = async (tab: FileTab) => {
+    try {
+      const res = await invoke<{ ok: boolean; messages: { kind: string; message: string; line: number; column: number }[] }>(
+        'validate_expression',
+        { input: tab.content }
+      );
+
+      const file = tab.path || tab.name;
+      if (res.messages.length) {
+        for (const m of res.messages) {
+          addOutput({
+            type: 'error',
+            message: m.message,
+            timestamp: new Date(),
+            file,
+            line: m.line,
+            column: m.column,
+          });
+        }
+        addOutput({
+          type: 'output',
+          message: 'Проверка завершена: найдены ошибки',
+          timestamp: new Date(),
+        });
+      } else {
+        addOutput({
+          type: 'success',
+          message: 'Цепочка корректна. Ошибок не найдено.',
+          timestamp: new Date(),
+        });
+      }
+    } catch (e) {
+      addOutput({
+        type: 'error',
+        message: `Ошибка выполнения: ${e}`,
+        timestamp: new Date(),
+        file: tab.path || tab.name,
+      });
+    } finally {
       isRunning.value = false;
     }
   };

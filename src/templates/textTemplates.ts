@@ -20,7 +20,6 @@ export function getTaskTemplate(): string {
 Верные цепочки
 .TRUE..AND..FALSE. -> .FALSE.
 X.GT.0.OR.Y.LT.5 -> unknown
-.NOT.(0.EQ.5) -> .TRUE.
 
 Цепочки с ошибками:
 .TRUE.AND.FASE.
@@ -28,9 +27,7 @@ X.GT.0.OR.Y.LT.5 -> unknown
  - Ошибка выполнения: Неизвестный операнд .FASE.
 X.GT..AND..Y.LT.5
  - Ошибка выполнения: Между .GT. и .AND. нет второго операнда
- - Ошибка выполнения: Лишняя точка перед переменной
-.NOT.A.GT.5)
- - Ошибка выполнения: Лишняя закрывающая скобка`
+ - Ошибка выполнения: Лишняя точка перед переменной`
 }
 
 export function getBibliographyTemplate(): string {
