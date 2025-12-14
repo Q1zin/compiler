@@ -857,4 +857,38 @@ mod tests {
             failures
         );
     }
+
+    #[test]
+    fn three_error_inputs_should_have_exactly_three_errors() {
+        // Each case is a *single* expression (single line) that must produce exactly 3 errors.
+        // Stable pattern: (1) missing second operand for comparison before .AND./.OR.,
+        // (2) extra dot before identifier on the RHS (..Y...), (3) extra closing paren at end.
+        let cases: [&str; 10] = [
+            "X.GT..AND..Y.LT.5)",
+            "X.GT..OR..Y.LT.5)",
+            "X.LT..AND..Y.GT.5)",
+            "X.LT..OR..Y.GT.5)",
+            "A1.GT..AND..B2.LT.3)",
+            "A1.GT..OR..B2.LT.3)",
+            "A1.LT..AND..B2.GT.3)",
+            "A1.LT..OR..B2.GT.3)",
+            "ABC.GT..AND..DEF.LT.10)",
+            "ABC.LT..OR..DEF.GT.10)",
+        ];
+
+        let mut failures: Vec<(&str, Vec<_>)> = Vec::new();
+
+        for input in cases {
+            let res = validate_expression(input);
+            if res.messages.len() != 3 {
+                failures.push((input, res.messages));
+            }
+        }
+
+        assert!(
+            failures.is_empty(),
+            "expected exactly 3 errors for every case, failures: {:#?}",
+            failures
+        );
+    }
 }
