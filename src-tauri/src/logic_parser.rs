@@ -25,6 +25,7 @@ pub enum TokenKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexErrorKind {
     MissingDotsForKeyword { keyword: String, suggested: String },
+    MissingTrailingDotForKeyword { keyword: String, suggested: String },
     UnknownDottedWord { word: String },
     ExtraDotBeforeIdentifier,
     UnexpectedChar { ch: char },
@@ -148,7 +149,68 @@ fn lex(input: &str) -> Vec<Token> {
                                 break;
                             }
                         }
+
+                        // Recovery for incomplete dotted keywords like ".FALSE" (missing trailing '.')
+                        // We emit a single lexer error and also insert the intended keyword token
+                        // so the parser can continue without cascading.
+                        let word_upper = input[(start + 1)..j].to_string();
+                        let suggested = match word_upper.as_str() {
+                            "TRUE" => Some((".TRUE.", TokenKind::True)),
+                            "FALSE" => Some((".FALSE.", TokenKind::False)),
+                            "AND" => Some((".AND.", TokenKind::And)),
+                            "OR" => Some((".OR.", TokenKind::Or)),
+                            "GT" => Some((".GT.", TokenKind::Gt)),
+                            "LT" => Some((".LT.", TokenKind::Lt)),
+                            _ => None,
+                        };
+
+                        if j >= bytes.len() || !input[j..].starts_with('.') {
+                            if let Some((suggested_lit, kind)) = suggested {
+                                i = j;
+                                push(
+                                    &mut tokens,
+                                    TokenKind::Error(LexErrorKind::MissingTrailingDotForKeyword {
+                                        keyword: word_upper,
+                                        suggested: suggested_lit.to_string(),
+                                    }),
+                                    start,
+                                    i,
+                                );
+                                // Insert recovered token
+                                push(&mut tokens, kind, start, i);
+                                continue;
+                            }
+                        }
+
                         if j < bytes.len() && input[j..].starts_with('.') {
+                            // Special recovery:
+                            // If the trailing '.' actually starts a known dotted operator/keyword
+                            // (e.g. input is "..Y.LT.5" -> we are at the extra '.' before Y),
+                            // we must NOT consume ".Y." as UnknownDottedWord because that would
+                            // swallow the operator's leading dot and cascade errors.
+                            let rest_from_trailing_dot = &input[j..];
+                            let trailing_dot_starts_known = [
+                                ".TRUE.",
+                                ".FALSE.",
+                                ".AND.",
+                                ".OR.",
+                                ".GT.",
+                                ".LT.",
+                            ]
+                            .iter()
+                            .any(|lit| rest_from_trailing_dot.starts_with(lit));
+
+                            if trailing_dot_starts_known {
+                                i += 1;
+                                push(
+                                    &mut tokens,
+                                    TokenKind::Error(LexErrorKind::ExtraDotBeforeIdentifier),
+                                    start,
+                                    i,
+                                );
+                                continue;
+                            }
+
                             let word = input[(start + 1)..j].to_string();
                             j += 1;
                             i = j;
@@ -316,6 +378,39 @@ impl<'a> Parser<'a> {
                                 &tok,
                                 format!("Необходимо писать {}, а не {}", suggested, keyword),
                             );
+                        }
+                        LexErrorKind::MissingTrailingDotForKeyword { keyword, suggested } => {
+                            let prev_non_error = self.tokens[..self.pos]
+                                .iter()
+                                .rev()
+                                .find(|t| !matches!(t.kind, TokenKind::Error(_)))
+                                .map(|t| &t.kind);
+
+                            let found = format!(".{}", keyword);
+                            let msg = match prev_non_error {
+                                Some(TokenKind::And) => format!(
+                                    "После .AND. ожидался логический операнд; найдено {} без точки в конце (нужно {})",
+                                    found, suggested
+                                ),
+                                Some(TokenKind::Or) => format!(
+                                    "После .OR. ожидался логический операнд; найдено {} без точки в конце (нужно {})",
+                                    found, suggested
+                                ),
+                                Some(TokenKind::Gt) => format!(
+                                    "После .GT. ожидался второй операнд; найдено {} без точки в конце (нужно {})",
+                                    found, suggested
+                                ),
+                                Some(TokenKind::Lt) => format!(
+                                    "После .LT. ожидался второй операнд; найдено {} без точки в конце (нужно {})",
+                                    found, suggested
+                                ),
+                                _ => format!(
+                                    "Необходимо писать {} (не хватает точки в конце)",
+                                    suggested
+                                ),
+                            };
+
+                            self.emit_error_token(&tok, msg);
                         }
                         LexErrorKind::UnknownDottedWord { word } => {
                             self.emit_error_token(
@@ -507,5 +602,41 @@ pub fn validate_expression(input: &str) -> ValidationResult {
     ValidationResult {
         ok: parser.messages.is_empty(),
         messages: parser.messages,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_expression;
+
+    #[test]
+    fn recovers_after_missing_operand_and_extra_dot() {
+        let res = validate_expression("X.GT..AND..Y.LT.5");
+        assert_eq!(res.messages.len(), 2, "messages: {:#?}", res.messages);
+        let m0 = &res.messages[0].message;
+        let m1 = &res.messages[1].message;
+
+        assert!(
+            m0.contains("Между .GT. и .AND. нет второго операнда")
+                || m1.contains("Между .GT. и .AND. нет второго операнда"),
+            "expected missing-operand message, got: {m0:?} / {m1:?}"
+        );
+        assert!(
+            m0.contains("Лишняя точка перед переменной") || m1.contains("Лишняя точка перед переменной"),
+            "expected extra-dot message, got: {m0:?} / {m1:?}"
+        );
+    }
+
+    #[test]
+    fn missing_trailing_dot_after_and_is_single_error() {
+        let res = validate_expression(".TRUE..AND..FALSE");
+        assert_eq!(res.messages.len(), 1, "messages: {:#?}", res.messages);
+        assert!(
+            res.messages[0].message.contains("После .AND.")
+                && res.messages[0].message.contains(".FALSE")
+                && res.messages[0].message.contains("нужно .FALSE."),
+            "unexpected message: {:?}",
+            res.messages[0].message
+        );
     }
 }

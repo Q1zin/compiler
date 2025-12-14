@@ -248,7 +248,7 @@ export function useEditor() {
         for (const m of res.messages) {
           addOutput({
             type: 'error',
-            message: `[rust] ${m.message}`,
+            message: m.message,
             timestamp: new Date(),
             file,
             line: m.line,
@@ -259,7 +259,7 @@ export function useEditor() {
       } catch (e) {
         addOutput({
           type: 'error',
-          message: `[rust] Ошибка выполнения: ${e}`,
+          message: `Ошибка выполнения: ${e}`,
           timestamp: new Date(),
           file,
           meta: { kind: 'parser-crash', parser: 'rust' },
@@ -272,7 +272,7 @@ export function useEditor() {
         for (const m of antlerMessages) {
           addOutput({
             type: 'error',
-            message: `[antler] ${m.message}`,
+            message: m.message,
             timestamp: new Date(),
             file,
             line: m.line,
@@ -283,7 +283,7 @@ export function useEditor() {
       } catch (e) {
         addOutput({
           type: 'error',
-          message: `[antler] Ошибка выполнения: ${e}`,
+          message: `Ошибка выполнения: ${e}`,
           timestamp: new Date(),
           file,
           meta: { kind: 'parser-crash', parser: 'antler' },
