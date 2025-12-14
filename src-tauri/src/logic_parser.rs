@@ -14,6 +14,7 @@ pub enum TokenKind {
     Or,
     Gt,
     Lt,
+    Newline,
     LParen,
     RParen,
     Id(String),
@@ -93,6 +94,26 @@ fn lex(input: &str) -> Vec<Token> {
 
     while i < bytes.len() {
         let ch = input[i..].chars().next().unwrap();
+
+        // Newline is a terminal separator: emit token (do not skip)
+        if ch == '\n' {
+            let start = i;
+            i += 1;
+            push(&mut tokens, TokenKind::Newline, start, i);
+            continue;
+        }
+        if ch == '\r' {
+            let start = i;
+            if i + 1 < bytes.len() && bytes[i + 1] == b'\n' {
+                i += 2;
+            } else {
+                i += 1;
+            }
+            push(&mut tokens, TokenKind::Newline, start, i);
+            continue;
+        }
+
+        // Skip other whitespace
         if ch.is_whitespace() {
             i += ch.len_utf8();
             continue;
@@ -434,24 +455,52 @@ impl<'a> Parser<'a> {
 
     fn parse(&mut self) {
         self.consume_errors();
-        self.parse_lv();
-        self.consume_errors();
 
-        // Extra tokens / extra closing parens
-        while !self.at_eof() {
-            let tok = self.current().clone();
-            match tok.kind {
-                TokenKind::RParen => {
-                    self.emit_error_token(&tok, "Лишняя закрывающая скобка".to_string());
-                    self.advance();
-                }
-                TokenKind::Eof => break,
-                _ => {
-                    self.emit_error_token(&tok, "Лишние символы в конце выражения".to_string());
-                    self.advance();
-                }
-            }
+        // allow leading blank lines
+        while matches!(self.current().kind, TokenKind::Newline) {
+            self.advance();
             self.consume_errors();
+        }
+
+        // Parse multiple expressions separated by newlines
+        while !self.at_eof() {
+            self.parse_lv();
+            self.consume_errors();
+
+            // Consume one or more newlines (expression separator)
+            if matches!(self.current().kind, TokenKind::Newline) {
+                while matches!(self.current().kind, TokenKind::Newline) {
+                    self.advance();
+                    self.consume_errors();
+                }
+                continue;
+            }
+
+            if self.at_eof() {
+                break;
+            }
+
+            // If there's junk on the same line, consume until newline/eof
+            while !self.at_eof() && !matches!(self.current().kind, TokenKind::Newline) {
+                let tok = self.current().clone();
+                match tok.kind {
+                    TokenKind::RParen => {
+                        self.emit_error_token(&tok, "Лишняя закрывающая скобка".to_string());
+                        self.advance();
+                    }
+                    _ => {
+                        self.emit_error_token(&tok, "Лишние символы в конце выражения".to_string());
+                        self.advance();
+                    }
+                }
+                self.consume_errors();
+            }
+
+            // optional newline(s) after junk
+            while matches!(self.current().kind, TokenKind::Newline) {
+                self.advance();
+                self.consume_errors();
+            }
         }
     }
 
@@ -638,5 +687,11 @@ mod tests {
             "unexpected message: {:?}",
             res.messages[0].message
         );
+    }
+
+    #[test]
+    fn supports_multiple_lines_of_expressions() {
+        let res = validate_expression(".TRUE.\n.FALSE.");
+        assert_eq!(res.messages.len(), 0, "messages: {:#?}", res.messages);
     }
 }

@@ -1,7 +1,7 @@
 grammar FortranLogical;
 
 program
-    : logicalExpression EOF
+    : NL* (logicalExpression (NL+ logicalExpression)*)? NL* EOF
     ;
 
 logicalExpression
@@ -64,4 +64,5 @@ NUMBER
 fragment LETTER : [A-Za-z] ;
 fragment DIGIT  : [0-9] ;
 
-WS : [ \t\r\n]+ -> skip ;
+NL : '\r'? '\n'+ ;
+WS : [ \t]+ -> skip ;
