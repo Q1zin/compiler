@@ -25,7 +25,12 @@ export function useEditor() {
     showLineNumbers: true,
   });
 
-  const output = ref<ProgramOutput[]>([]);
+  const tabOutputs = reactive<Map<string, ProgramOutput[]>>(new Map());
+
+  const output = computed(() => {
+    if (!activeTabId.value) return [];
+    return tabOutputs.get(activeTabId.value) || [];
+  });
   const isRunning = ref(false);
 
   const activeTab = computed(() => 
@@ -89,16 +94,20 @@ export function useEditor() {
           const target = tabs.value.find(t => t.id === tab.id);
           if (target) target.confirmClosePending = false;
           confirmTimers.delete(tab.id);
-          output.value = output.value.filter((o) => !(o.type === 'warning' && o.meta?.kind === 'unsaved-close' && o.meta?.tabId === tab.id));
+          const tabOut = tabOutputs.get(tab.id) || [];
+          tabOutputs.set(tab.id, tabOut.filter((o) => !(o.type === 'warning' && o.meta?.kind === 'unsaved-close')));
         }, 5000);
         confirmTimers.set(tab.id, timeoutId);
-        output.value = output.value.filter((o) => !(o.type === 'warning' && o.meta?.kind === 'unsaved-close' && o.meta?.tabId === tab.id));
-        addOutput({
-          type: 'warning',
-          message: `Предупреждение: есть несохранённые изменения в файле "${tab.name}". Нажмите ещё раз, чтобы закрыть.`,
-          timestamp: new Date(),
-          meta: { kind: 'unsaved-close', tabId: tab.id },
-        });
+        const currentOutput = tabOutputs.get(tab.id) || [];
+        tabOutputs.set(tab.id, [
+          ...currentOutput.filter((o) => !(o.type === 'warning' && o.meta?.kind === 'unsaved-close')),
+          {
+            type: 'warning',
+            message: `Предупреждение: есть несохранённые изменения в файле "${tab.name}". Нажмите ещё раз, чтобы закрыть.`,
+            timestamp: new Date(),
+            meta: { kind: 'unsaved-close', tabId: tab.id },
+          }
+        ]);
         return;
       }
     }
@@ -109,7 +118,7 @@ export function useEditor() {
       window.clearTimeout(t);
       confirmTimers.delete(tabId);
     }
-    output.value = output.value.filter((o) => !(o.type === 'warning' && o.meta?.kind === 'unsaved-close' && o.meta?.tabId === tabId));
+    tabOutputs.delete(tabId);
 
     if (tabId === activeTabId.value) {
       if (tabs.value.length > 0) {
@@ -266,6 +275,7 @@ export function useEditor() {
 
   const validateFile = async (tab: FileTab) => {
     const file = tab.path || tab.name;
+    const messages: ProgramOutput[] = [];
 
     try {
       try {
@@ -275,7 +285,7 @@ export function useEditor() {
         );
 
         for (const m of res.messages) {
-          addOutput({
+          messages.push({
             type: 'error',
             message: m.message,
             timestamp: new Date(),
@@ -286,7 +296,7 @@ export function useEditor() {
           });
         }
       } catch (e) {
-        addOutput({
+        messages.push({
           type: 'error',
           message: `Ошибка выполнения: ${e}`,
           timestamp: new Date(),
@@ -298,7 +308,7 @@ export function useEditor() {
       try {
         const antlerMessages = validateWithAntler(tab.content);
         for (const m of antlerMessages) {
-          addOutput({
+          messages.push({
             type: 'error',
             message: m.message,
             timestamp: new Date(),
@@ -309,7 +319,7 @@ export function useEditor() {
           });
         }
       } catch (e) {
-        addOutput({
+        messages.push({
           type: 'error',
           message: `Ошибка выполнения: ${e}`,
           timestamp: new Date(),
@@ -317,21 +327,29 @@ export function useEditor() {
           meta: { kind: 'parser-crash', parser: 'antler' },
         });
       }
+
+      tabOutputs.set(tab.id, messages);
     } finally {
       isRunning.value = false;
     }
   };
 
   const addOutput = (outputItem: ProgramOutput) => {
-    output.value.push(outputItem);
+    if (!activeTabId.value) return;
+    const current = tabOutputs.get(activeTabId.value) || [];
+    tabOutputs.set(activeTabId.value, [...current, outputItem]);
   };
 
   const clearOutput = () => {
-    output.value = [];
+    if (activeTabId.value) {
+      tabOutputs.set(activeTabId.value, []);
+    }
   };
 
   const clearErrors = () => {
-    output.value = [];
+    if (activeTabId.value) {
+      tabOutputs.set(activeTabId.value, []);
+    }
   };
 
   const changeCodeFontSize = (delta: number) => {
