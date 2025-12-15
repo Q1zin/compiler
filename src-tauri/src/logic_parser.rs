@@ -465,6 +465,15 @@ impl<'a> Parser<'a> {
                         self.emit_error_token(&tok, "Лишняя закрывающая скобка".to_string());
                         self.advance();
                     }
+                    TokenKind::Gt | TokenKind::Lt => {
+                        self.emit_error_token(&tok, "Ожидался первый операнд сравнения".to_string());
+                        self.advance();
+                        self.consume_errors();
+                        if matches!(self.current().kind, TokenKind::Id(_) | TokenKind::Num(_)) {
+                            self.advance();
+                            self.consume_errors();
+                        }
+                    }
                     _ => {
                         self.emit_error_token(&tok, "Лишние символы в конце выражения".to_string());
                         self.advance();
@@ -513,7 +522,77 @@ impl<'a> Parser<'a> {
         let tok = self.current().clone();
         match tok.kind {
             TokenKind::True | TokenKind::False => {
+                let logical_const = if matches!(tok.kind, TokenKind::True) { ".TRUE." } else { ".FALSE." };
                 self.advance();
+                self.consume_errors();
+                if matches!(self.current().kind, TokenKind::Gt | TokenKind::Lt) {
+                    let cmp_tok = self.current().clone();
+                    let cmp_op = if matches!(cmp_tok.kind, TokenKind::Gt) { ".GT." } else { ".LT." };
+                    self.emit_error_token(
+                        &cmp_tok,
+                        format!("Оператор сравнения {} не может применяться к логическому значению {}", cmp_op, logical_const),
+                    );
+                    self.advance();
+                    self.consume_errors();
+                    if matches!(self.current().kind, TokenKind::Id(_) | TokenKind::Num(_)) {
+                        self.advance();
+                    }
+                }
+            }
+            TokenKind::Gt | TokenKind::Lt => {
+                let op = self.current().clone();
+                self.emit_error_token(&op, "Ожидался первый операнд сравнения".to_string());
+                self.advance();
+                self.consume_errors();
+
+                match self.current().kind.clone() {
+                    TokenKind::Id(_) | TokenKind::Num(_) => {
+                        self.parse_operand();
+                    }
+                    TokenKind::Newline => {
+                        let here = self.current().clone();
+                        self.emit_error_token(&here, "Ожидался второй операнд сравнения".to_string());
+                    }
+                    TokenKind::And | TokenKind::Or => {
+                        let next_op = match self.current().kind {
+                            TokenKind::And => ".AND.",
+                            TokenKind::Or => ".OR.",
+                            _ => "",
+                        };
+                        let here = self.current().clone();
+                        self.emit_error_token(
+                            &here,
+                            format!(
+                                "Между {} и {} нет второго операнда",
+                                match op.kind {
+                                    TokenKind::Gt => ".GT.",
+                                    TokenKind::Lt => ".LT.",
+                                    _ => "",
+                                },
+                                next_op
+                            ),
+                        );
+                    }
+                    TokenKind::RParen | TokenKind::Eof => {
+                        let here = self.current().clone();
+                        self.emit_error_token(
+                            &here,
+                            format!(
+                                "После {} отсутствует второй операнд",
+                                match op.kind {
+                                    TokenKind::Gt => ".GT.",
+                                    TokenKind::Lt => ".LT.",
+                                    _ => "",
+                                }
+                            ),
+                        );
+                    }
+                    _ => {
+                        let here = self.current().clone();
+                        self.emit_error_token(&here, "Ожидался второй операнд сравнения".to_string());
+                        self.advance();
+                    }
+                }
             }
             TokenKind::Newline => {
                 self.emit_error_token(&tok, "Ожидался логический операнд".to_string());
@@ -630,6 +709,42 @@ pub fn validate_expression(input: &str) -> ValidationResult {
 #[cfg(test)]
 mod tests {
     use super::validate_expression;
+
+    #[test]
+    fn misplaced_comparison_operator_after_logical_operand_reports_missing_lhs() {
+        let res = validate_expression(".TRUE..GT.5");
+        assert!(
+            res.messages.iter().any(|m| m.message.contains("не может применяться к логическому значению")),
+            "messages: {:#?}",
+            res.messages
+        );
+    }
+
+    #[test]
+    fn comparison_after_logical_const_in_complex_expr_single_error() {
+        let res = validate_expression(".TRUE..GT.0.OR.Y.LT.5");
+        assert_eq!(res.messages.len(), 1, "messages: {:#?}", res.messages);
+        assert!(
+            res.messages[0].message.contains("не может применяться к логическому значению"),
+            "unexpected message: {:?}",
+            res.messages[0].message
+        );
+    }
+
+    #[test]
+    fn leading_comparison_operator_does_not_cascade_into_trailing_garbage() {
+        let res = validate_expression(".GT.0.OR.Y.LT.5");
+        assert!(
+            res.messages.iter().any(|m| m.message.contains("Ожидался первый операнд сравнения")),
+            "messages: {:#?}",
+            res.messages
+        );
+        assert!(
+            !res.messages.iter().any(|m| m.message.contains("Лишние символы")),
+            "messages: {:#?}",
+            res.messages
+        );
+    }
 
     #[test]
     fn recovers_after_missing_operand_and_extra_dot() {
