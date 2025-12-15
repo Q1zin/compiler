@@ -14,35 +14,44 @@ export interface AntlerValidationMessage {
 export function validateWithAntler(input: string): AntlerValidationMessage[] {
   const messages: AntlerValidationMessage[] = [];
 
-  const listener: ANTLRErrorListener<Token> = {
-    syntaxError: (
-      _recognizer,
-      _offendingSymbol,
-      line,
-      charPositionInLine,
-      msg,
-      _e: RecognitionException | undefined
-    ) => {
-      messages.push({
-        message: msg,
+  const normalized = input.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = normalized.split('\n');
+
+  for (let idx = 0; idx < lines.length; idx += 1) {
+    const lineText = lines[idx];
+    if (lineText.trim().length === 0) continue;
+
+    const lineOffset = idx;
+    const listener: ANTLRErrorListener<Token> = {
+      syntaxError: (
+        _recognizer,
+        _offendingSymbol,
         line,
-        column: Math.max(1, charPositionInLine + 1),
-      });
-    },
-  };
+        charPositionInLine,
+        msg,
+        _e: RecognitionException | undefined
+      ) => {
+        messages.push({
+          message: msg,
+          line: lineOffset + Math.max(1, line),
+          column: Math.max(1, charPositionInLine + 1),
+        });
+      },
+    };
 
-  const chars = CharStreams.fromString(input);
-  const lexer = new FortranLogicalLexer(chars);
-  lexer.removeErrorListeners();
-  lexer.addErrorListener(listener);
+    const chars = CharStreams.fromString(lineText);
+    const lexer = new FortranLogicalLexer(chars);
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(listener);
 
-  const tokens = new CommonTokenStream(lexer);
-  const parser = new FortranLogicalParser(tokens);
-  parser.removeErrorListeners();
-  parser.addErrorListener(listener);
+    const tokens = new CommonTokenStream(lexer);
+    const parser = new FortranLogicalParser(tokens);
+    parser.removeErrorListeners();
+    parser.addErrorListener(listener);
 
-  parser.buildParseTree = false;
-  parser.program();
+    parser.buildParseTree = false;
+    parser.program();
+  }
 
   return messages;
 }
