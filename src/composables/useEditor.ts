@@ -4,7 +4,7 @@ import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialo
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { invoke } from '@tauri-apps/api/core';
-import { getTaskTemplate, getBibliographyTemplate, getSourceCodeHeaderTemplate } from '../templates/textTemplates';
+import { getTaskTemplate, getBibliographyTemplate, getSourceCodeHeaderTemplate, getGrammarChoiceTemplate, getChomskyClassificationTemplate, getMethod1Template, getAntlrTemplate } from '../templates/textTemplates';
 import { validateWithAntler } from '../antler/validate';
 
 
@@ -429,6 +429,42 @@ export function useEditor() {
     }
   };
 
+  const insertGrammarChoice = () => {
+    const template = `/*\n${getGrammarChoiceTemplate()}\n*/\n\n`;
+    const tab = activeTab.value;
+    if (tab) {
+      tab.content = tab.content + '\n\n' + template;
+      tab.isModified = true;
+    }
+  };
+
+  const insertChomskyClassification = () => {
+    const template = `/*\n${getChomskyClassificationTemplate()}\n*/\n\n`;
+    const tab = activeTab.value;
+    if (tab) {
+      tab.content = tab.content + '\n\n' + template;
+      tab.isModified = true;
+    }
+  };
+
+  const insertMethod1 = () => {
+    const template = `/*\n${getMethod1Template()}\n*/\n\n`;
+    const tab = activeTab.value;
+    if (tab) {
+      tab.content = tab.content + '\n\n' + template;
+      tab.isModified = true;
+    }
+  };
+
+  const insertAntlr = () => {
+    const template = `/*\n${getAntlrTemplate()}\n*/\n\n`;
+    const tab = activeTab.value;
+    if (tab) {
+      tab.content = tab.content + '\n\n' + template;
+      tab.isModified = true;
+    }
+  };
+
   const initialize = () => {};
 
   initialize();
@@ -462,6 +498,10 @@ export function useEditor() {
     insertTaskTemplate,
     insertBibliography,
     addSourceCodeComment,
+    insertGrammarChoice,
+    insertChomskyClassification,
+    insertMethod1,
+    insertAntlr,
     initialize,
     openFileFromDisk,
     openActiveFileExternally,

@@ -86,6 +86,19 @@ const handleToggleTheme = () => {
           <div class="dropdown-item" @click="handleAction('text', 'task')">
             <span>Постановка задачи</span>
           </div>
+          <div class="dropdown-item" @click="handleAction('text', 'grammar-choice')">
+            <span>Выбор грамматики</span>
+          </div>
+          <div class="dropdown-item" @click="handleAction('text', 'chomsky-classification')">
+            <span>Классификация Хомского</span>
+          </div>
+          <div class="dropdown-item" @click="handleAction('text', 'method1')">
+            <span>1 - Метод</span>
+          </div>
+          <div class="dropdown-item" @click="handleAction('text', 'antlr')">
+            <span>ANTLR</span>
+          </div>
+          <div class="dropdown-separator"></div>
           <div class="dropdown-item" @click="handleAction('text', 'bibliography')">
             <span>Список литературы</span>
           </div>

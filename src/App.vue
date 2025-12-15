@@ -6,7 +6,7 @@ import CodeEditor from './components/CodeEditor.vue'
 import OutputPanel from './components/OutputPanel.vue'
 import TextModal from './components/TextModal.vue'
 import { useEditor } from './composables/useEditor.ts'
-import { getTaskTemplate, getBibliographyTemplate, getSourceCodeHeaderTemplate } from './templates/textTemplates'
+import { getTaskTemplate, getBibliographyTemplate, getSourceCodeHeaderTemplate, getGrammarChoiceTemplate, getChomskyClassificationTemplate, getMethod1Template, getAntlrTemplate } from './templates/textTemplates'
 
 const {
   tabs,
@@ -30,6 +30,10 @@ const {
   insertTaskTemplate,
   insertBibliography,
   addSourceCodeComment,
+  insertGrammarChoice,
+  insertChomskyClassification,
+  insertMethod1,
+  insertAntlr,
   openFileFromDisk,
   openActiveFileExternally,
   revealActiveFileInFolder,
@@ -94,6 +98,30 @@ const handleTextAction = (action: string) => {
       modalKind.value = 'source-code'
       showTextModal.value = true
       break
+    case 'grammar-choice':
+      modalTitle.value = 'Выбор грамматики'
+      modalText.value = getGrammarChoiceTemplate()
+      modalKind.value = 'grammar-choice'
+      showTextModal.value = true
+      break
+    case 'chomsky-classification':
+      modalTitle.value = 'Классификация Хомского'
+      modalText.value = getChomskyClassificationTemplate()
+      modalKind.value = 'chomsky-classification'
+      showTextModal.value = true
+      break
+    case 'method1':
+      modalTitle.value = '1 - Метод'
+      modalText.value = getMethod1Template()
+      modalKind.value = 'method1'
+      showTextModal.value = true
+      break
+    case 'antlr':
+      modalTitle.value = 'ANTLR'
+      modalText.value = getAntlrTemplate()
+      modalKind.value = 'antlr'
+      showTextModal.value = true
+      break
   }
 }
 
@@ -140,7 +168,7 @@ const handleClearErrors = () => {
 const showTextModal = ref(false)
 const modalTitle = ref('')
 const modalText = ref('')
-const modalKind = ref<'task' | 'bibliography' | 'source-code' | null>(null)
+const modalKind = ref<'task' | 'bibliography' | 'source-code' | 'grammar-choice' | 'chomsky-classification' | 'method1' | 'antlr' | null>(null)
 const closeTextModal = () => { showTextModal.value = false }
 const insertTextFromModal = () => {
   if (!activeTab.value) {
@@ -149,6 +177,10 @@ const insertTextFromModal = () => {
   if (modalKind.value === 'task') insertTaskTemplate()
   else if (modalKind.value === 'bibliography') insertBibliography()
   else if (modalKind.value === 'source-code') addSourceCodeComment()
+  else if (modalKind.value === 'grammar-choice') insertGrammarChoice()
+  else if (modalKind.value === 'chomsky-classification') insertChomskyClassification()
+  else if (modalKind.value === 'method1') insertMethod1()
+  else if (modalKind.value === 'antlr') insertAntlr()
   showTextModal.value = false
 }
 
