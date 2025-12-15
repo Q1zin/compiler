@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 
 defineProps<{
   title: string
@@ -11,6 +11,16 @@ const emit = defineEmits<{
   'close': []
   'insert': []
 }>()
+
+const fontSize = ref(14)
+
+const increaseFontSize = () => {
+  fontSize.value = Math.min(24, fontSize.value + 1)
+}
+
+const decreaseFontSize = () => {
+  fontSize.value = Math.max(10, fontSize.value - 1)
+}
 
 const onKey = (e: KeyboardEvent) => {
   if (e.key === 'Escape') emit('close')
@@ -25,10 +35,17 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
     <div class="modal">
       <div class="header">
         <h3 class="title">{{ title }}</h3>
-        <button class="icon-btn" title="Закрыть" @click="emit('close')">✖</button>
+        <div class="header-controls">
+          <div class="font-controls">
+            <button class="font-btn" @click="decreaseFontSize" title="Уменьшить шрифт">A-</button>
+            <span class="font-size-label">{{ fontSize }}px</span>
+            <button class="font-btn" @click="increaseFontSize" title="Увеличить шрифт">A+</button>
+          </div>
+          <button class="icon-btn" title="Закрыть" @click="emit('close')">✖</button>
+        </div>
       </div>
       <div class="body">
-        <pre class="content">{{ text }}</pre>
+        <pre class="content" :style="{ fontSize: fontSize + 'px' }">{{ text }}</pre>
       </div>
       <div class="footer">
         <button class="btn" @click="emit('insert')">Вставить в редактор</button>
@@ -50,8 +67,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 }
 
 .modal {
-  width: min(800px, 90vw);
-  max-height: 80vh;
+  width: min(1100px, 95vw);
+  max-height: 90vh;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -69,6 +86,41 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
   border-bottom: 1px solid var(--border-color);
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.font-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.font-btn {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.font-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.font-size-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  min-width: 40px;
+  text-align: center;
+}
+
 .title { margin: 0; font-size: 16px; color: var(--text-primary); }
 
 .icon-btn {
@@ -81,8 +133,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 .icon-btn:hover { color: var(--text-primary); }
 
 .body {
-  padding: 16px;
+  padding: 20px;
   overflow: auto;
+  flex: 1;
 }
 
 .content {
@@ -90,8 +143,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
   white-space: pre-wrap;
   color: var(--text-primary);
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .footer {
