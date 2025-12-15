@@ -30,6 +30,7 @@ pub enum LexErrorKind {
     UnknownDottedWord { word: String },
     ExtraDotBeforeIdentifier,
     UnexpectedChar { ch: char },
+    InvalidIdentifier { text: String },
 }
 
 #[derive(Debug, Clone)]
@@ -297,6 +298,28 @@ fn lex(input: &str) -> Vec<Token> {
                         break;
                     }
                 }
+                if j < bytes.len() {
+                    let next_ch = input[j..].chars().next().unwrap();
+                    if is_ident_start(next_ch) || is_ident_continue(next_ch) {
+                        while j < bytes.len() {
+                            let cc = input[j..].chars().next().unwrap();
+                            if is_ident_continue(cc) {
+                                j += cc.len_utf8();
+                            } else {
+                                break;
+                            }
+                        }
+                        let bad_id = input[start..j].to_string();
+                        i = j;
+                        push(
+                            &mut tokens,
+                            TokenKind::Error(LexErrorKind::InvalidIdentifier { text: bad_id }),
+                            start,
+                            i,
+                        );
+                        continue;
+                    }
+                }
                 let num = input[start..j].to_string();
                 i = j;
                 push(&mut tokens, TokenKind::Num(num), start, i);
@@ -369,6 +392,114 @@ impl<'a> Parser<'a> {
         self.emit_error_at(tok.span.start, message);
     }
 
+    fn consume_errors_check_logical(&mut self) -> bool {
+        let mut found_logical_like = false;
+        loop {
+            let tok = self.current().clone();
+            match &tok.kind {
+                TokenKind::Error(kind) => {
+                    match kind {
+                        LexErrorKind::UnknownDottedWord { word } => {
+                            let w = word.to_uppercase();
+                            if w.contains("TRUE") || w.contains("TURE") || w.contains("TRU")
+                               || w.contains("FALSE") || w.contains("FASLE") || w.contains("FLASE") || w.contains("FALS") {
+                                found_logical_like = true;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                _ => break,
+            }
+            self.consume_errors_single();
+        }
+        found_logical_like
+    }
+    
+    fn consume_errors_single(&mut self) {
+        let tok = self.current().clone();
+        if let TokenKind::Error(kind) = &tok.kind {
+            match kind {
+                LexErrorKind::MissingDotsForKeyword { keyword, suggested } => {
+                    self.emit_error_token(
+                        &tok,
+                        format!("Необходимо писать {}, а не {}", suggested, keyword),
+                    );
+                }
+                LexErrorKind::MissingTrailingDotForKeyword { keyword, suggested } => {
+                    let prev_non_error = self.tokens[..self.pos]
+                        .iter()
+                        .rev()
+                        .find(|t| !matches!(t.kind, TokenKind::Error(_)))
+                        .map(|t| &t.kind);
+
+                    let found = format!(".{}", keyword);
+                    let msg = match prev_non_error {
+                        Some(TokenKind::And) => format!(
+                            "После .AND. ожидался логический операнд; найдено {} без точки в конце (нужно {})",
+                            found, suggested
+                        ),
+                        Some(TokenKind::Or) => format!(
+                            "После .OR. ожидался логический операнд; найдено {} без точки в конце (нужно {})",
+                            found, suggested
+                        ),
+                        Some(TokenKind::Gt) => format!(
+                            "После .GT. ожидался второй операнд; найдено {} без точки в конце (нужно {})",
+                            found, suggested
+                        ),
+                        Some(TokenKind::Lt) => format!(
+                            "После .LT. ожидался второй операнд; найдено {} без точки в конце (нужно {})",
+                            found, suggested
+                        ),
+                        _ => format!(
+                            "Необходимо писать {} (не хватает точки в конце)",
+                            suggested
+                        ),
+                    };
+
+                    self.emit_error_token(&tok, msg);
+                }
+                LexErrorKind::UnknownDottedWord { word } => {
+                    let w = word.to_uppercase();
+                    let suggestion = if w.contains("TRUE") || w.contains("TURE") || w.contains("TRU") {
+                        Some(".TRUE.")
+                    } else if w.contains("FALSE") || w.contains("FASLE") || w.contains("FLASE") || w.contains("FALS") {
+                        Some(".FALSE.")
+                    } else if w.contains("AND") {
+                        Some(".AND.")
+                    } else if w.contains("OR") && w.len() <= 4 {
+                        Some(".OR.")
+                    } else if w.contains("GT") || w.contains("GE") {
+                        Some(".GT.")
+                    } else if w.contains("LT") || w.contains("LE") {
+                        Some(".LT.")
+                    } else {
+                        None
+                    };
+                    
+                    let msg = match suggestion {
+                        Some(s) => format!("Неизвестный операнд .{0}. Возможно, вы имели в виду {1}?", word, s),
+                        None => format!("Неизвестный операнд .{}.", word),
+                    };
+                    self.emit_error_token(&tok, msg);
+                }
+                LexErrorKind::ExtraDotBeforeIdentifier => {
+                    self.emit_error_token(&tok, "Лишняя точка перед переменной".to_string());
+                }
+                LexErrorKind::UnexpectedChar { ch } => {
+                    self.emit_error_token(&tok, format!("Недопустимый символ '{}'", *ch));
+                }
+                LexErrorKind::InvalidIdentifier { text } => {
+                    self.emit_error_token(
+                        &tok,
+                        format!("Идентификатор не может начинаться с цифры: {}", text),
+                    );
+                }
+            }
+            self.advance();
+        }
+    }
+
     fn consume_errors(&mut self) {
         loop {
             let tok = self.current().clone();
@@ -415,16 +546,40 @@ impl<'a> Parser<'a> {
                             self.emit_error_token(&tok, msg);
                         }
                         LexErrorKind::UnknownDottedWord { word } => {
-                            self.emit_error_token(
-                                &tok,
-                                format!("Неизвестный операнд .{}.", word),
-                            );
+                            let w = word.to_uppercase();
+                            let suggestion = if w.contains("TRUE") || w.contains("TURE") || w.contains("TRU") {
+                                Some(".TRUE.")
+                            } else if w.contains("FALSE") || w.contains("FASLE") || w.contains("FLASE") || w.contains("FALS") {
+                                Some(".FALSE.")
+                            } else if w.contains("AND") {
+                                Some(".AND.")
+                            } else if w.contains("OR") && w.len() <= 4 {
+                                Some(".OR.")
+                            } else if w.contains("GT") || w.contains("GE") {
+                                Some(".GT.")
+                            } else if w.contains("LT") || w.contains("LE") {
+                                Some(".LT.")
+                            } else {
+                                None
+                            };
+                            
+                            let msg = match suggestion {
+                                Some(s) => format!("Неизвестный операнд .{0}. Возможно, вы имели в виду {1}?", word, s),
+                                None => format!("Неизвестный операнд .{}.", word),
+                            };
+                            self.emit_error_token(&tok, msg);
                         }
                         LexErrorKind::ExtraDotBeforeIdentifier => {
                             self.emit_error_token(&tok, "Лишняя точка перед переменной".to_string());
                         }
                         LexErrorKind::UnexpectedChar { ch } => {
                             self.emit_error_token(&tok, format!("Недопустимый символ '{}'", ch));
+                        }
+                        LexErrorKind::InvalidIdentifier { text } => {
+                            self.emit_error_token(
+                                &tok,
+                                format!("Идентификатор не может начинаться с цифры: {}", text),
+                            );
                         }
                     }
                     self.advance();
@@ -458,34 +613,36 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            while !self.at_eof() && !matches!(self.current().kind, TokenKind::Newline) {
-                let tok = self.current().clone();
-                match tok.kind {
-                    TokenKind::RParen => {
-                        self.emit_error_token(&tok, "Лишняя закрывающая скобка".to_string());
-                        self.advance();
-                    }
-                    TokenKind::Gt | TokenKind::Lt => {
-                        self.emit_error_token(&tok, "Ожидался первый операнд сравнения".to_string());
-                        self.advance();
-                        self.consume_errors();
-                        if matches!(self.current().kind, TokenKind::Id(_) | TokenKind::Num(_)) {
-                            self.advance();
-                            self.consume_errors();
-                        }
-                    }
-                    _ => {
-                        self.emit_error_token(&tok, "Лишние символы в конце выражения".to_string());
-                        self.advance();
-                    }
-                }
-                self.consume_errors();
-            }
+            self.sync_to_newline();
 
             while matches!(self.current().kind, TokenKind::Newline) {
                 self.advance();
                 self.consume_errors();
             }
+        }
+    }
+
+    fn sync_to_newline(&mut self) {
+        let mut reported_trailing = false;
+        while !self.at_eof() && !matches!(self.current().kind, TokenKind::Newline) {
+            let tok = self.current().clone();
+            match tok.kind {
+                TokenKind::RParen => {
+                    self.emit_error_token(&tok, "Лишняя закрывающая скобка".to_string());
+                    self.advance();
+                }
+                TokenKind::Error(_) => {
+                    self.consume_errors();
+                }
+                _ => {
+                    if !reported_trailing {
+                        self.emit_error_token(&tok, "Лишние символы в конце выражения".to_string());
+                        reported_trailing = true;
+                    }
+                    self.advance();
+                }
+            }
+            self.consume_errors();
         }
     }
 
@@ -495,7 +652,25 @@ impl<'a> Parser<'a> {
             self.consume_errors();
             if matches!(self.current().kind, TokenKind::Or) {
                 self.advance();
-                self.consume_errors();
+                let had_logical_like = self.consume_errors_check_logical();
+                if self.at_eof() || matches!(self.current().kind, TokenKind::Newline) {
+                    if !had_logical_like {
+                        let tok = self.current().clone();
+                        self.emit_error_token(&tok, "Ожидался логический операнд после .OR.".to_string());
+                    }
+                    break;
+                }
+                if matches!(self.current().kind, TokenKind::Or) {
+                    let tok = self.current().clone();
+                    self.emit_error_token(&tok, "Два оператора .OR. подряд без операнда между ними".to_string());
+                    self.advance();
+                    self.consume_errors();
+                    if self.at_eof() || matches!(self.current().kind, TokenKind::Newline) {
+                        break;
+                    }
+                }
+                if matches!(self.current().kind, TokenKind::And) {
+                }
                 self.parse_lt();
                 continue;
             }
@@ -509,7 +684,30 @@ impl<'a> Parser<'a> {
             self.consume_errors();
             if matches!(self.current().kind, TokenKind::And) {
                 self.advance();
-                self.consume_errors();
+                let had_logical_like = self.consume_errors_check_logical();
+                if self.at_eof() || matches!(self.current().kind, TokenKind::Newline) {
+                    if !had_logical_like {
+                        let tok = self.current().clone();
+                        self.emit_error_token(&tok, "Ожидался логический операнд после .AND.".to_string());
+                    }
+                    break;
+                }
+                if matches!(self.current().kind, TokenKind::And) {
+                    let tok = self.current().clone();
+                    self.emit_error_token(&tok, "Два оператора .AND. подряд без операнда между ними".to_string());
+                    self.advance();
+                    let had_logical_like2 = self.consume_errors_check_logical();
+                    if self.at_eof() || matches!(self.current().kind, TokenKind::Newline) {
+                        if !had_logical_like2 {
+                        }
+                        break;
+                    }
+                }
+                if matches!(self.current().kind, TokenKind::Or) {
+                    let tok = self.current().clone();
+                    self.emit_error_token(&tok, "Оператор .OR. сразу после .AND. без операнда между ними".to_string());
+                    break;
+                }
                 self.parse_lo();
                 continue;
             }
@@ -614,6 +812,10 @@ impl<'a> Parser<'a> {
             TokenKind::RParen => {
                 self.emit_error_token(&tok, "Лишняя закрывающая скобка".to_string());
                 self.advance();
+                self.consume_errors();
+                if !self.at_eof() && !matches!(self.current().kind, TokenKind::Newline | TokenKind::RParen) {
+                    self.parse_lo();
+                }
             }
             TokenKind::Eof => {
                 self.emit_error_token(&tok, "Ожидалось логическое выражение".to_string());
@@ -628,7 +830,16 @@ impl<'a> Parser<'a> {
     fn parse_sv(&mut self) {
         self.consume_errors();
         self.parse_operand();
-        self.consume_errors();
+        
+        let mut had_unknown_dotted = false;
+        while let TokenKind::Error(LexErrorKind::UnknownDottedWord { word }) = &self.current().kind {
+            let w = word.to_uppercase();
+            if w.contains("GT") || w.contains("LT") || w.contains("GE") || w.contains("LE") 
+               || w.contains("EQ") || w.contains("NE") {
+                had_unknown_dotted = true;
+            }
+            self.consume_errors();
+        }
 
         let op_tok = self.current().clone();
         let op_str = match op_tok.kind {
@@ -673,6 +884,11 @@ impl<'a> Parser<'a> {
                     self.emit_error_token(&here, "Ожидался второй операнд сравнения".to_string());
                     self.advance();
                 }
+            }
+        } else if had_unknown_dotted {
+            self.consume_errors();
+            if matches!(self.current().kind, TokenKind::Id(_) | TokenKind::Num(_)) {
+                self.parse_operand();
             }
         } else {
             self.emit_error_token(

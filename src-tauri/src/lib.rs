@@ -1,4 +1,4 @@
-mod logic_parser;
+pub mod logic_parser;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
